@@ -17,7 +17,7 @@
   ],
   "license": "MIT",
   "author": "Mikhail Makeev <mihail.makeev@gmail.com>",
-  "homepage": "https://github.com/makeev/alphai-ts-sdk#readme",
+  "homepage": "https://alphai.io/developers",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/makeev/alphai-ts-sdk.git"
