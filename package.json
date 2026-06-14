@@ -16,7 +16,7 @@
     "typescript"
   ],
   "license": "MIT",
-  "author": "AlphaAI",
+  "author": "Mikhail Makeev <mihail.makeev@gmail.com>",
   "homepage": "https://github.com/makeev/alphai-ts-sdk#readme",
   "repository": {
     "type": "git",
