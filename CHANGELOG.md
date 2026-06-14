@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-14
+
+### Changed
+
+- Package `homepage` now points to <https://alphai.io/developers> (was the GitHub
+  README), so the npm page links to the product documentation.
+
+### Documentation
+
+- README links the standalone [alphai-sdk-ts-examples](https://github.com/makeev/alphai-sdk-ts-examples)
+  repo.
+
+No runtime code changed in this release.
+
 ## [0.1.0] - 2026-06-14
 
 ### Added
