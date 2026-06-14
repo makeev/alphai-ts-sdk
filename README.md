@@ -236,6 +236,9 @@ Runnable scripts live in [`examples/`](./examples):
 ALPHAI_API_KEY=ak_live_… npx tsx examples/quickstart.ts
 ```
 
+A standalone, fuller set of runnable scripts lives in its own repo:
+[**alphai-sdk-ts-examples**](https://github.com/makeev/alphai-sdk-ts-examples).
+
 ## License
 
 [MIT](./LICENSE)
