@@ -1,0 +1,13 @@
+{
+  "ticker": "AAPL",
+  "days": 7,
+  "total": 42,
+  "bullish": 25,
+  "neutral": 12,
+  "bearish": 5,
+  "daily": [
+    { "day": "2026-06-08", "bullish": 4, "neutral": 2, "bearish": 1 },
+    { "day": "2026-06-09", "bullish": 3, "neutral": 1, "bearish": 0 },
+    { "day": "2026-06-10", "bullish": 5, "neutral": 2, "bearish": 1 }
+  ]
+}

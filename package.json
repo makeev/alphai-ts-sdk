@@ -1,0 +1,71 @@
+{
+  "name": "alphai-sdk",
+  "version": "0.1.0",
+  "description": "Typed TypeScript client for the AlphaAI REST API — relevance-scored, ticker-linked financial news and SEC Form 4 insider data. Runs in Node, browsers, edge, Deno, and Bun with zero runtime dependencies.",
+  "keywords": [
+    "alphai",
+    "financial-news",
+    "stock-news",
+    "sentiment",
+    "insider-trading",
+    "sec-form-4",
+    "trading",
+    "fintech",
+    "api",
+    "sdk",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "AlphaAI",
+  "homepage": "https://github.com/makeev/alphai-ts-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/makeev/alphai-ts-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/makeev/alphai-ts-sdk/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "check": "biome check . && tsc --noEmit && vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

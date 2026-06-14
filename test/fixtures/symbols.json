@@ -1,0 +1,18 @@
+[
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "asset_type": "Stock",
+    "exchange": "NASDAQ",
+    "sector": "Technology",
+    "industry": "Consumer Electronics"
+  },
+  {
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation",
+    "asset_type": "Stock",
+    "exchange": "NASDAQ",
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  }
+]

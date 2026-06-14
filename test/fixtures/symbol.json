@@ -1,0 +1,10 @@
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "asset_type": "Stock",
+  "exchange": "NASDAQ",
+  "sector": "Technology",
+  "industry": "Consumer Electronics",
+  "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.",
+  "website": "https://www.apple.com"
+}

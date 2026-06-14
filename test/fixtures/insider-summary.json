@@ -1,0 +1,24 @@
+{
+  "ticker": "AAPL",
+  "days": 30,
+  "total_transactions": 17,
+  "buy_count": 6,
+  "sell_count": 11,
+  "buy_value_usd": "1284500.00",
+  "sell_value_usd": "9930275.42",
+  "pct_10b5_1": 64,
+  "top_insiders": [
+    {
+      "name": "Jane Executive",
+      "title": "Chief Financial Officer",
+      "transaction_count": 3,
+      "net_value": "-845000.00"
+    },
+    {
+      "name": "John Director",
+      "title": "",
+      "transaction_count": 1,
+      "net_value": "125000.00"
+    }
+  ]
+}

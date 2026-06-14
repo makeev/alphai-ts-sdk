@@ -1,0 +1,19 @@
+# Source & tests are not shipped — only the built dist/ is published.
+src/
+test/
+examples/
+.github/
+node_modules/
+coverage/
+
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+biome.json
+PLAN.md
+
+*.tgz
+*.log
+.env
+.env.*
+.DS_Store

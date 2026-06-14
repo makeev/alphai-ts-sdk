@@ -1,0 +1,66 @@
+{
+  "original": {
+    "id": 1234567,
+    "uid": "a1b2c3d4e5f60718",
+    "title": "NVIDIA reports record data-center revenue",
+    "url": "https://example.com/nvda-earnings",
+    "time_published": "2026-05-21T20:05:00Z",
+    "authors": ["Jane Reporter"],
+    "summary": "NVIDIA posted record quarterly revenue driven by data-center demand.",
+    "banner_image": "https://example.com/img/nvda.jpg",
+    "source": "Example Newswire",
+    "source_domain": "example.com",
+    "topics": [{ "topic": "earnings", "relevance": 0.95 }],
+    "tickers_sentiment": [
+      { "ticker": "NVDA", "relevance_score": "0.9", "ticker_sentiment_label": "Bullish" }
+    ],
+    "created_at": "2026-05-21T20:06:11Z",
+    "updated_at": "2026-05-21T20:06:11Z"
+  },
+  "enrichment": {
+    "category": "earnings",
+    "tickers": ["NVDA"],
+    "relevance_score": 9,
+    "ai_trading_insights": {
+      "ticker_analysis": [
+        {
+          "ticker": "NVDA",
+          "relevance_context": "Primary subject of the report.",
+          "impact_analysis": {
+            "summary": "Strong beat on revenue and guidance.",
+            "sentiment": "positive",
+            "price_impact_prediction": "Likely positive pre-market move.",
+            "confidence": "high",
+            "reasoning": "Revenue materially exceeded consensus."
+          }
+        }
+      ],
+      "news_trading_value": {
+        "actionability_score": "high",
+        "information_novelty": 9,
+        "timing_relevance": "Released after market close.",
+        "market_sentiment_alignment": "Confirms bullish positioning.",
+        "estimated_read_time": "2 minutes"
+      },
+      "indirect_market_effects": {
+        "sector_implications": "Positive read-through for AI suppliers.",
+        "regional_market_impact": "US large-cap tech.",
+        "global_market_relevance": "High."
+      },
+      "alternative_perspectives": {
+        "contrarian_view": "Valuation already prices in growth.",
+        "overlooked_factors": "Supply constraints could cap upside."
+      }
+    },
+    "news_context_enhancement": {
+      "background_context": "NVIDIA is the leading AI GPU vendor.",
+      "impact_analysis": "Reinforces data-center demand narrative.",
+      "key_entities": [{ "name": "NVIDIA", "type": "company", "description": "GPU manufacturer." }],
+      "market_relevance_summary": "Bellwether for AI capex.",
+      "estimated_read_time_minutes": 2
+    }
+  },
+  "story_id": null,
+  "sources_count": null,
+  "sources": null
+}
