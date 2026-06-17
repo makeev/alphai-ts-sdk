@@ -6,5 +6,9 @@
   "sector": "Technology",
   "industry": "Consumer Electronics",
   "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.",
-  "website": "https://www.apple.com"
+  "website": "https://www.apple.com",
+  "country": "",
+  "currency": "",
+  "supports_insider": true,
+  "tv_symbol": ""
 }

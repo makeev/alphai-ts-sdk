@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-17
+
+### Added
+
+- `Symbol` now includes the multi-market fields `country`, `currency`,
+  `supports_insider`, and `tv_symbol`, mirroring the API's crypto + foreign
+  equity support. `country` (ISO alpha-2) and `currency` are populated for
+  foreign/crypto listings (empty for US); `supports_insider` is `true` only for
+  US SEC names with Form 4 data. Crypto tickers use a `-USD` quote suffix
+  (e.g. `BTC-USD`); foreign listings use the Yahoo-suffix form (e.g. `VOD.L`).
+
+### Documentation
+
+- Corrected the documented `minRelevance` server default to 4 (was 6).
+
 ## [0.1.1] - 2026-06-14
 
 ### Changed

@@ -100,6 +100,13 @@ const symbols = await client.symbols.list({ limit: 500, offset: 0 });
 // Symbol detail (throws NotFoundError for an unknown ticker).
 const aapl = await client.symbols.get("AAPL");
 
+// Crypto + foreign listings are supported too. Each Symbol carries multi-market
+// metadata: asset_type ("Stock" | "ETF" | "Crypto"), country, currency, and
+// supports_insider (US SEC names only). Crypto is "<SYM>-USD"; foreign uses the
+// Yahoo suffix (e.g. "VOD.L").
+const btc = await client.symbols.get("BTC-USD");
+console.log(btc.asset_type, btc.currency, btc.supports_insider); // "Crypto" "USD" false
+
 // 7-day AI sentiment rollup (excludes Form 4).
 const sentiment = await client.symbols.sentimentSummary("AAPL");
 

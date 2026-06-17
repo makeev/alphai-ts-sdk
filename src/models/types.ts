@@ -138,17 +138,36 @@ export interface NewsPage {
  * `import type { Symbol as AlphaSymbol } from "alphai-sdk"`.
  *
  * The list endpoint (`/api/symbols/`) omits `description` and `website`; the
- * detail endpoint (`/api/symbols/{ticker}/`) includes them.
+ * detail endpoint (`/api/symbols/{ticker}/`) includes them. Both carry the
+ * multi-market fields (`country`, `currency`, `supports_insider`, `tv_symbol`).
+ *
+ * Covers US equities/ETFs, cryptocurrencies (`BTC-USD`), and foreign listings
+ * (Yahoo-suffix form, e.g. `VOD.L`).
  */
 export interface Symbol {
   symbol: string;
   name: string;
-  /** e.g. "Stock" | "ETF". */
+  /** `"Stock"`, `"ETF"`, or `"Crypto"`. */
   asset_type?: string;
-  /** NYSE/NASDAQ/AMEX/OTC/CBOE; "" if unknown. */
+  /**
+   * TradingView exchange prefix. US: NYSE/NASDAQ/AMEX/OTC/CBOE. Foreign listings
+   * carry their venue (LSE, XETR, EURONEXT, TSE, HKEX, …); crypto carries the
+   * `CRYPTO` sentinel. `""` if unknown.
+   */
   exchange?: string;
   sector?: string;
   industry?: string;
+  /** ISO alpha-2 country code for foreign listings; `""` for US and crypto. */
+  country?: string;
+  /** Trading currency for foreign/crypto listings; `""` for US. */
+  currency?: string;
+  /**
+   * `true` only for US SEC names that can have Form 4 insider data; `false` for
+   * cryptocurrencies and foreign listings.
+   */
+  supports_insider?: boolean;
+  /** Optional TradingView-symbol override; usually `""`. */
+  tv_symbol?: string;
   description?: string;
   website?: string | null;
 }
@@ -239,7 +258,7 @@ export interface NewsListOptions extends RequestOptions {
   category?: CategoryFilter;
   /** Exclude these categories. */
   excludeCategories?: CategoryFilter;
-  /** Minimum relevance score, 1–10 (server default 6). */
+  /** Minimum relevance score, 1–10 (server default 4). */
   minRelevance?: number;
   /** Collapse reprints into a single story (sends `collapse=story`). */
   collapseStories?: boolean;

@@ -11,9 +11,22 @@ describe("symbols endpoints", () => {
 
     const list = await client.symbols.list({ limit: 2 });
 
-    expect(list).toHaveLength(2);
+    expect(list).toHaveLength(4);
     expect(list[0].symbol).toBe("AAPL");
     expect(list[1].name).toBe("NVIDIA Corporation");
+
+    // Multi-market metadata: US equities support Form 4 insider data and carry
+    // no country/currency; crypto and foreign listings do the opposite.
+    expect(list[0].supports_insider).toBe(true);
+    expect(list[0].country).toBe("");
+    const btc = list[2];
+    expect(btc.asset_type).toBe("Crypto");
+    expect(btc.currency).toBe("USD");
+    expect(btc.supports_insider).toBe(false);
+    const vod = list[3];
+    expect(vod.country).toBe("GB");
+    expect(vod.currency).toBe("GBP");
+    expect(vod.supports_insider).toBe(false);
   });
 
   it("parses symbol detail including description and website", async () => {
@@ -24,6 +37,9 @@ describe("symbols endpoints", () => {
     expect(detail.symbol).toBe("AAPL");
     expect(detail.website).toBe("https://www.apple.com");
     expect(detail.description).toContain("Apple");
+    expect(detail.supports_insider).toBe(true);
+    expect(detail.country).toBe("");
+    expect(detail.tv_symbol).toBe("");
   });
 
   it("parses the sentiment summary", async () => {
