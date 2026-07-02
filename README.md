@@ -195,14 +195,16 @@ Pass `maxRetries: 0` to disable retries.
 
 ## Rate limits
 
-Limits are per account, hourly, sliding window: **Free 100 / Basic 1000 / Pro 10000**
-requests per hour. Every keyed response carries `X-RateLimit-Limit`,
+Limits are per account and two-layer — a per-minute burst plus a per-day volume
+cap: **Free 20/min · 100/day / Basic 60/min · 10,000/day / Pro 150/min ·
+100,000/day**. News-archive depth is tiered too (Free 30 days / Basic 90 / Pro
+full archive; deeper pagination returns `403`). Every keyed response carries `X-RateLimit-Limit`,
 `X-RateLimit-Remaining`, and `X-RateLimit-Reset` (epoch seconds). The SDK captures
 them after each call:
 
 ```ts
 await client.news.list({ symbol: "NVDA" });
-console.log(client.lastRateLimit); // { limit: 1000, remaining: 998, reset: 1700000000 }
+console.log(client.lastRateLimit); // { limit: 10000, remaining: 9998, reset: 1700000000 }
 ```
 
 Cache-served responses may omit the headers; in that case `lastRateLimit` keeps its
