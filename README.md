@@ -68,6 +68,7 @@ const page = await client.news.list({
   excludeCategories: ["crypto"],
   minRelevance: 7,                   // 1–10
   collapseStories: true,             // collapse reprints into one story
+  pageSize: 50,                      // 10 default; 50 needs a Pro key
   cursor,                            // opaque cursor from a previous page
 });
 console.log(page.results, page.next_cursor);

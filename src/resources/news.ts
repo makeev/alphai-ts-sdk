@@ -33,6 +33,7 @@ function newsQuery(options: NewsListOptions): QueryParams {
     exclude_categories: normalizeCategories(options.excludeCategories),
     min_relevance: options.minRelevance,
     collapse: options.collapseStories ? "story" : undefined,
+    page_size: options.pageSize,
   };
 }
 
@@ -78,10 +79,10 @@ export class NewsResource {
     });
   }
 
-  /** `GET /api/news/insider/` — the `category=insider` feed (SEC Form 4 + institutional stakes). */
+  /** `GET /api/news/insider/` — the `category=insider` feed (SEC Form 4 filings). */
   insider(options: InsiderListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/insider/", {
-      query: { cursor: options.cursor, symbol: options.symbol },
+      query: { cursor: options.cursor, symbol: options.symbol, page_size: options.pageSize },
       signal: options.signal,
     });
   }

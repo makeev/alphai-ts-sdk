@@ -43,6 +43,30 @@ describe("query param serialization", () => {
     expect(url.searchParams.getAll("category")).toEqual(["earnings", "insider", "crypto"]);
   });
 
+  it("maps pageSize to page_size on the feed and insider routes", async () => {
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({ pageSize: 50 });
+    await client.news.insider({ pageSize: 50 });
+
+    const feedUrl = new URL(fetchImpl.calls[0].url);
+    expect(feedUrl.searchParams.get("page_size")).toBe("50");
+    const insiderUrl = new URL(fetchImpl.calls[1].url);
+    expect(insiderUrl.pathname).toBe("/api/news/insider/");
+    expect(insiderUrl.searchParams.get("page_size")).toBe("50");
+  });
+
+  it("omits page_size when pageSize is not set", async () => {
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({});
+
+    const url = new URL(fetchImpl.calls[0].url);
+    expect(url.searchParams.has("page_size")).toBe(false);
+  });
+
   it("maps excludeCategories to exclude_categories", async () => {
     const fetchImpl = mockFetch(emptyPage);
     const client = makeClient(fetchImpl);

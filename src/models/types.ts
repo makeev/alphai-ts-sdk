@@ -262,6 +262,8 @@ export interface NewsListOptions extends RequestOptions {
   minRelevance?: number;
   /** Collapse reprints into a single story (sends `collapse=story`). */
   collapseStories?: boolean;
+  /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
+  pageSize?: number;
 }
 
 /** Options for {@link NewsResource.iterate}. */
@@ -276,6 +278,8 @@ export interface NewsIterateOptions extends NewsListOptions {
 export interface InsiderListOptions extends RequestOptions {
   cursor?: string;
   symbol?: string;
+  /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
+  pageSize?: number;
 }
 
 /** Options for {@link NewsResource.iterateInsider}. */
