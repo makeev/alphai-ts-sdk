@@ -1,6 +1,6 @@
 {
   "name": "alphai-sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Typed TypeScript client for the AlphaAI REST API \u2014 relevance-scored, ticker-linked financial news and SEC Form 4 insider data. Runs in Node, browsers, edge, Deno, and Bun with zero runtime dependencies.",
   "keywords": [
     "alphai",
@@ -43,7 +43,12 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "engines": {
     "node": ">=18"
   },

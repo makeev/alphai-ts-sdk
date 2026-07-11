@@ -54,3 +54,50 @@ describe("news endpoints", () => {
     expect(() => client.news.get("")).toThrow(TypeError);
   });
 });
+
+describe("insider feed structured block", () => {
+  const insiderItem = {
+    original: { uid: "f4abc12345678901", title: "Insider sale" },
+    enrichment: { category: "insider", tickers: ["CRWV"], relevance_score: 6 },
+    insider: {
+      side: "sell",
+      transaction_code: "S",
+      shares: "4000",
+      avg_price_usd: "175",
+      total_value_usd: "700000",
+      is_10b5_1: true,
+      insider_name: "STEVENS MARK A",
+      insider_title: "Director",
+      is_officer: false,
+      is_director: true,
+      is_ten_percent_owner: false,
+      transaction_date: "2026-07-09",
+    },
+  };
+
+  it("sends min_relevance and preserves the insider block's decimal strings", async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ results: [insiderItem], next_cursor: null }));
+    const client = makeClient(fetchImpl);
+
+    const page = await client.news.insider({ symbol: "CRWV", minRelevance: 7 });
+
+    const url = new URL(fetchImpl.calls[0].url);
+    expect(url.pathname).toBe("/api/news/insider/");
+    expect(url.searchParams.get("min_relevance")).toBe("7");
+    const block = page.results[0].insider;
+    expect(block?.side).toBe("sell");
+    expect(block?.shares).toBe("4000");
+    expect(block?.avg_price_usd).toBe("175");
+    expect(block?.transaction_date).toBe("2026-07-09");
+  });
+
+  it("tolerates items without the insider block", async () => {
+    const client = makeClient(
+      mockFetch(() => jsonResponse({ results: [article], next_cursor: null })),
+    );
+
+    const page = await client.news.insider();
+
+    expect(page.results[0].insider).toBeUndefined();
+  });
+});

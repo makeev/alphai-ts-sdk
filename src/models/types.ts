@@ -108,9 +108,36 @@ export interface EnrichedArticle {
 }
 
 /** A fully enriched news article. */
+/**
+ * Structured SEC Form 4 event block, present on insider-feed items only
+ * (`GET /api/news/insider/`). Aggregate of the row's whole transaction group:
+ * `shares`/`total_value_usd` are group sums (a 10b5-1 ladder is one event),
+ * `avg_price_usd` is value-weighted over priced tranches. `side` is the signal
+ * label — `buy` (P) / `sell` (S) / `other` (incl. D, sale to issuer); the raw
+ * `transaction_code` rides along. Money/share fields are decimal strings
+ * ("25000", "187.32"); null when the filing prices no tranche.
+ */
+export interface InsiderEvent {
+  side: "buy" | "sell" | "other";
+  transaction_code: string;
+  shares: string;
+  avg_price_usd?: string | null;
+  total_value_usd?: string | null;
+  is_10b5_1: boolean;
+  insider_name: string;
+  insider_title: string;
+  is_officer: boolean;
+  is_director: boolean;
+  is_ten_percent_owner: boolean;
+  /** ISO date of the last fill in the group, e.g. "2026-07-09". */
+  transaction_date: string;
+}
+
 export interface RichNewsArticle {
   original: OriginalArticle;
   enrichment: EnrichedArticle;
+  /** Structured Form 4 event block — insider-feed items only; absent/null elsewhere. */
+  insider?: InsiderEvent | null;
   /** Present only when `collapseStories` (collapse=story) is set. */
   story_id?: string | null;
   /** Present only when `collapseStories` is set. */
@@ -278,6 +305,12 @@ export interface NewsIterateOptions extends NewsListOptions {
 export interface InsiderListOptions extends RequestOptions {
   cursor?: string;
   symbol?: string;
+  /**
+   * Minimum relevance score (1-10), same semantics as the main feed. Insider
+   * rows score deterministically from the event's summed dollar value, so
+   * this acts as an "only large trades" filter. Sends `min_relevance`.
+   */
+  minRelevance?: number;
   /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
   pageSize?: number;
 }

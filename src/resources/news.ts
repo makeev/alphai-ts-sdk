@@ -82,7 +82,12 @@ export class NewsResource {
   /** `GET /api/news/insider/` — the `category=insider` feed (SEC Form 4 filings). */
   insider(options: InsiderListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/insider/", {
-      query: { cursor: options.cursor, symbol: options.symbol, page_size: options.pageSize },
+      query: {
+        cursor: options.cursor,
+        symbol: options.symbol,
+        min_relevance: options.minRelevance,
+        page_size: options.pageSize,
+      },
       signal: options.signal,
     });
   }
