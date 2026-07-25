@@ -276,6 +276,18 @@ export interface RequestOptions {
 }
 
 /** Options for {@link NewsResource.list}. */
+/**
+ * Feed ordering. `published` (the default) is the reverse-chronological feed and
+ * pages into older history. `ingested` is delta polling: rows in the order they
+ * became available, ascending, so a poller cannot miss an article that reached
+ * the feed after its publish time.
+ *
+ * The two modes mint SEPARATE cursor families. Pass the same `sort` on every
+ * call of a run: replaying a cursor into the other mode is a `400`, not a
+ * silent restart.
+ */
+export type NewsSort = "published" | "ingested";
+
 export interface NewsListOptions extends RequestOptions {
   /** Opaque pagination cursor from a previous page's `next_cursor`. */
   cursor?: string;
@@ -291,6 +303,12 @@ export interface NewsListOptions extends RequestOptions {
   collapseStories?: boolean;
   /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
   pageSize?: number;
+  /**
+   * Feed ordering; see {@link NewsSort}. With `"ingested"`, `next_cursor` is
+   * always set and an empty `results` means "caught up" - store the cursor and
+   * call again later.
+   */
+  sort?: NewsSort;
 }
 
 /** Options for {@link NewsResource.iterate}. */

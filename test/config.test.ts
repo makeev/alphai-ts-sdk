@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AlphaAI, MissingAPIKeyError } from "../src";
+import { AlphaAI, MissingAPIKeyError, VERSION } from "../src";
 import type { FetchLike } from "../src";
 import { jsonResponse, mockFetch } from "./helpers";
 
@@ -72,5 +73,17 @@ describe("rate-limit capture", () => {
     await client.news.trending();
     await client.news.trending();
     expect(client.lastRateLimit).toEqual({ limit: 1000, remaining: 500, reset: null });
+  });
+});
+
+describe("version", () => {
+  it("matches package.json so the User-Agent reports the real release", () => {
+    // This drifted unnoticed from 0.1.0 through the 0.2.0 and 0.3.0 releases:
+    // every request identified itself as 0.1.0, which is the string adoption is
+    // measured by server-side. Nothing asserted it, so nothing caught it.
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    };
+    expect(VERSION).toBe(pkg.version);
   });
 });

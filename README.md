@@ -141,6 +141,33 @@ for await (const article of client.news.iterate({ symbol: "AAPL", maxItems: 50 }
 Cursors are opaque — never build or parse them; pass `page.next_cursor` straight back
 in as `cursor` to fetch the next page manually.
 
+### Polling for what is new (`sort: "ingested"`)
+
+Articles reach the feed after their publish time, so a poller that tracks
+`time_published` silently skips late arrivals. `sort: "ingested"` orders the feed
+by arrival instead, and its cursor is a polling position rather than an
+end-of-feed marker:
+
+```ts
+let cursor = await loadCursor(); // undefined on the first run
+
+const page = await client.news.list({ sort: "ingested", cursor, symbol: "NVDA" });
+for (const article of page.results) {
+  handle(article); // article.original.created_at = when we received it
+}
+await saveCursor(page.next_cursor); // always set; empty results = caught up
+```
+
+Send the same `sort` on every call of a run. Each mode mints its own cursor
+family, so replaying an ingested cursor into the default mode is a `400`, not a
+silent restart. `iterate({ sort: "ingested" })` threads it for you and stops once
+the position stops advancing.
+
+On Free and Basic the archive horizon applies to where a poll *resumes*, so a
+cursor left unused for longer than your window comes back `403`
+(`extra.reason === "archive_horizon"`). Poll on your plan's cadence and you will
+not see it; Pro has no window.
+
 ## Errors
 
 Every non-2xx response is mapped to a typed error. All extend `AlphaAIError`.

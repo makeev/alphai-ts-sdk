@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-25
+
+### Added
+- `sort` on `news.list` / `news.iterate` (`NewsSort = "published" | "ingested"`).
+  `"ingested"` is delta polling: the feed ordered by arrival rather than publish
+  time, so a poller cannot miss an article that reached the feed late (most do -
+  general news lands a median of ~33 minutes after publication). In that mode
+  `next_cursor` is always set and an empty `results` means "caught up": store the
+  cursor and call again later. `article.original.created_at` carries the moment
+  AlphaAI received the article.
+
+### Fixed
+- `iterate()` now stops when `next_cursor` stops advancing, not only when it is
+  `null`. Delta mode never returns a null cursor, so without this a
+  `sort: "ingested"` iteration would have spun against the API until the rate
+  limit stopped it.
+- `VERSION` was still `0.1.0`, so every request sent
+  `User-Agent: alphai-sdk-js/0.1.0` regardless of the installed release. Now
+  bumped with the package and pinned to `package.json` by a test.
+
+### Notes
+- Cursors are mode-specific. Send the same `sort` on every call of a run -
+  replaying a cursor into the other mode returns `400` (`BadRequestError`), as
+  does a corrupted cursor, rather than silently restarting at the head.
+- On Free and Basic the news-archive horizon applies to where a poll resumes, so
+  a cursor left unused for longer than your window returns `403`
+  (`extra.reason === "archive_horizon"`). Pro has no window.
+
 ## [0.3.0] - 2026-07-11
 
 ### Added

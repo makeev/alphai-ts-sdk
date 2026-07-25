@@ -60,3 +60,52 @@ describe("pagination", () => {
     expect(new URL(fetchImpl.calls[1].url).searchParams.get("cursor")).toBe("c2");
   });
 });
+
+describe("delta polling (sort: ingested)", () => {
+  it("stops when the cursor stops advancing instead of spinning forever", async () => {
+    // Delta mode has no end of feed: next_cursor is ALWAYS set, and a caught-up
+    // poll echoes the cursor it was given back. Without the repeated-cursor
+    // guard this loop would hammer the API until the rate limit stopped it.
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [article], next_cursor: "c2" })
+        : jsonResponse({ results: [], next_cursor: "c2" }),
+    );
+    const client = makeClient(fetchImpl);
+
+    const collected = [];
+    for await (const a of client.news.iterate({ sort: "ingested" })) collected.push(a);
+
+    expect(collected).toHaveLength(1);
+    expect(fetchImpl.calls).toHaveLength(2);
+  });
+
+  it("threads sort onto every page so a cursor is never replayed into the other mode", async () => {
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [article], next_cursor: "c2" })
+        : jsonResponse({ results: [], next_cursor: "c2" }),
+    );
+    const client = makeClient(fetchImpl);
+
+    for await (const _ of client.news.iterate({ sort: "ingested" })) {
+      // drain
+    }
+
+    for (const call of fetchImpl.calls) {
+      expect(new URL(call.url).searchParams.get("sort")).toBe("ingested");
+    }
+  });
+
+  it("resumes from a stored cursor", async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ results: [], next_cursor: "saved" }));
+    const client = makeClient(fetchImpl);
+
+    for await (const _ of client.news.iterate({ sort: "ingested", cursor: "saved" })) {
+      // drain
+    }
+
+    expect(fetchImpl.calls).toHaveLength(1);
+    expect(new URL(fetchImpl.calls[0].url).searchParams.get("cursor")).toBe("saved");
+  });
+});

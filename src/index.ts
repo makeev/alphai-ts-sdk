@@ -45,6 +45,7 @@ export type {
   NewsIterateOptions,
   NewsListOptions,
   NewsPage,
+  NewsSort,
   NewsTradingValue,
   OriginalArticle,
   RateLimit,

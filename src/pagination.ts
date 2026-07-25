@@ -16,7 +16,14 @@ export interface PaginateOptions {
 /**
  * Async generator over a cursor-paginated endpoint. Calls `fetchPage` with the
  * current cursor, yields each item, then follows `next_cursor` until it is
- * `null` or a `maxItems` / `maxPages` cap is reached.
+ * `null`, until it stops advancing, or until a `maxItems` / `maxPages` cap is
+ * reached.
+ *
+ * The "stops advancing" condition is what terminates a `sort: "ingested"` run.
+ * Delta mode has no end of feed: `next_cursor` is ALWAYS set, and a caught-up
+ * poll returns an empty page carrying the same cursor it was given. Without
+ * this check the loop would spin against the API until it hit the rate limit.
+ * It also bounds any server that pins its cursor for another reason.
  */
 export async function* paginate<T>(
   fetchPage: (cursor?: string) => Promise<CursorPage<T>>,
@@ -43,7 +50,7 @@ export async function* paginate<T>(
     if (maxPages !== undefined && pages >= maxPages) return;
 
     const next = page.next_cursor;
-    if (!next) return;
+    if (!next || next === cursor) return;
     cursor = next;
   }
 }

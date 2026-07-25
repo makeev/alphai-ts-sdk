@@ -34,6 +34,7 @@ function newsQuery(options: NewsListOptions): QueryParams {
     min_relevance: options.minRelevance,
     collapse: options.collapseStories ? "story" : undefined,
     page_size: options.pageSize,
+    sort: options.sort,
   };
 }
 
@@ -48,6 +49,11 @@ export class NewsResource {
   /**
    * `GET /api/news/` — the main feed, newest first. Defaults server-side to
    * `relevance_score >= 6` and at least one ticker. Returns one page.
+   *
+   * Pass `sort: "ingested"` to poll for what is new instead of reading the top
+   * of the feed: rows come back in arrival order, `next_cursor` is always set,
+   * and an empty `results` means you are caught up. Cursors are mode-specific,
+   * so send the same `sort` on every call of a run.
    */
   list(options: NewsListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/", {
@@ -58,7 +64,12 @@ export class NewsResource {
 
   /**
    * Iterate the main feed across pages, following `next_cursor` automatically.
-   * Honors optional `maxItems` / `maxPages` caps.
+   * Honors optional `maxItems` / `maxPages` caps, and `cursor` to resume.
+   *
+   * With `sort: "ingested"` this drains what is currently new and stops once
+   * the position stops advancing (delta mode has no null cursor). `sort` is
+   * threaded onto every page, so the run never replays a cursor into the other
+   * mode.
    */
   iterate(options: NewsIterateOptions = {}): AsyncGenerator<RichNewsArticle> {
     const { maxItems, maxPages, cursor, ...rest } = options;

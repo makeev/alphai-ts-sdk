@@ -57,6 +57,26 @@ describe("query param serialization", () => {
     expect(insiderUrl.searchParams.get("page_size")).toBe("50");
   });
 
+  it("sends sort verbatim on the feed route", async () => {
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({ sort: "ingested" });
+
+    expect(new URL(fetchImpl.calls[0].url).searchParams.get("sort")).toBe("ingested");
+  });
+
+  it("omits sort by default", async () => {
+    // published is the server default; sending it explicitly would only make
+    // otherwise identical cached URLs differ.
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({});
+
+    expect(new URL(fetchImpl.calls[0].url).searchParams.has("sort")).toBe(false);
+  });
+
   it("omits page_size when pageSize is not set", async () => {
     const fetchImpl = mockFetch(emptyPage);
     const client = makeClient(fetchImpl);
