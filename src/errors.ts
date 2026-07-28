@@ -5,7 +5,7 @@
  * AlphaAIError                         base
  * ├── AlphaAIConnectionError           network / timeout / abort
  * ├── AlphaAIAPIError                  any non-2xx response
- * │   ├── BadRequestError      (400)   .fields for validation errors
+ * │   ├── BadRequestError      (400)   .fields / .allowedParams for validation errors
  * │   ├── AuthenticationError  (401)
  * │   ├── PermissionDeniedError(403)
  * │   ├── NotFoundError        (404)
@@ -79,16 +79,55 @@ export class AlphaAIAPIError extends AlphaAIError {
   }
 }
 
-/** 400 — bad request. For validation errors, {@link BadRequestError.fields} holds per-field messages. */
+/**
+ * 400 — bad request. For validation errors, {@link BadRequestError.fields} holds
+ * per-field messages and {@link BadRequestError.allowedParams} the endpoint's full
+ * parameter vocabulary.
+ *
+ * A cursor is never rejected for age — the tokens carry no expiry. An unreadable
+ * one was constructed or truncated rather than taken from a previous response's
+ * `next_cursor`.
+ */
 export class BadRequestError extends AlphaAIAPIError {
-  /** Per-field validation messages from `extra.fields`, when present. */
+  /**
+   * Per-field validation messages from `extra.fields`, when present.
+   *
+   * The API sends that key in two shapes, both normalised here:
+   * an **array** of validator entries (`{loc: ["skip"], msg: …}`) for an unknown
+   * or ill-typed query parameter — the common case — and a **record** of
+   * `{field: messages}` for a field rejected inside a view (a malformed `cursor`).
+   * Releases before 0.4.1 understood only the record, so the array shape left
+   * `fields` undefined.
+   */
   readonly fields?: Record<string, string[]>;
+
+  /**
+   * Every query parameter this endpoint accepts, sent when the 400 was caused by
+   * an unknown one. Undefined for 400s from anywhere else — never guessed.
+   */
+  readonly allowedParams?: string[];
 
   constructor(args: APIErrorArgs) {
     super(args);
     this.name = "BadRequestError";
-    if (isRecord(args.extra) && isRecord(args.extra.fields)) {
-      this.fields = args.extra.fields as Record<string, string[]>;
+    if (isRecord(args.extra)) {
+      const raw = args.extra.fields;
+      if (isRecord(raw)) {
+        this.fields = raw as Record<string, string[]>;
+      } else if (Array.isArray(raw)) {
+        const normalised: Record<string, string[]> = {};
+        for (const entry of raw) {
+          if (!isRecord(entry)) continue;
+          const loc = entry.loc;
+          const key = Array.isArray(loc) ? loc.map(String).join(".") : "_";
+          (normalised[key] ??= []).push(String(entry.msg ?? ""));
+        }
+        this.fields = normalised;
+      }
+      const allowed = args.extra.allowed_params;
+      if (Array.isArray(allowed)) {
+        this.allowedParams = allowed.map(String);
+      }
     }
   }
 }

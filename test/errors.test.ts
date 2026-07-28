@@ -55,6 +55,57 @@ describe("error mapping", () => {
     expect(err.fields).toEqual({ min_relevance: ["Must be 1–10."] });
   });
 
+  it("normalises the array shape of extra.fields and exposes allowedParams", async () => {
+    // An unknown query parameter comes back as an ARRAY of validator entries,
+    // not a record — the common shape, and the one that used to leave `fields`
+    // undefined entirely.
+    const client = makeClient(
+      mockFetch(() =>
+        jsonResponse(
+          {
+            message: "Validation error",
+            extra: {
+              fields: [
+                {
+                  type: "extra_forbidden",
+                  loc: ["skip"],
+                  msg: "Extra inputs are not permitted. Did you mean 'cursor'?",
+                },
+              ],
+              allowed_params: ["cursor", "page_size", "symbol"],
+              docs: "https://alphai.io/developers",
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const err = (await captureError(client.news.list())) as BadRequestError;
+
+    expect(err.fields).toEqual({
+      skip: ["Extra inputs are not permitted. Did you mean 'cursor'?"],
+    });
+    expect(err.allowedParams).toEqual(["cursor", "page_size", "symbol"]);
+  });
+
+  it("leaves allowedParams undefined when the API did not send it", async () => {
+    const client = makeClient(
+      mockFetch(() =>
+        jsonResponse(
+          {
+            message: "Validation error",
+            extra: { fields: { cursor: ["Cursor is an opaque token — pass back 'next_cursor'."] } },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const err = (await captureError(client.news.list())) as BadRequestError;
+
+    expect(err.allowedParams).toBeUndefined();
+    expect(err.fields?.cursor?.[0]).toContain("next_cursor");
+  });
+
   it("maps 404", async () => {
     const client = makeClient(
       mockFetch(() => jsonResponse({ message: "Not found." }, { status: 404 })),

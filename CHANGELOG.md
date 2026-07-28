@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `BadRequestError.allowedParams` — the endpoint's full query-parameter
+  vocabulary, which the API now returns on a 400 caused by an unknown
+  parameter. Left `undefined` for 400s from anywhere else, so it never guesses.
+
+### Fixed
+- `BadRequestError.fields` was `undefined` for the most common validation
+  error. The API sends `extra.fields` as an **array** of validator entries when
+  a query parameter is unknown or ill-typed, and as a **record** when a field is
+  rejected inside a view (a malformed `cursor`); only the record was
+  understood. Both shapes now normalise to `Record<string, string[]>`.
+- `BadRequestError` docs no longer suggest a cursor can expire — the tokens
+  carry no expiry. An unreadable cursor was constructed or truncated rather
+  than taken from a previous response's `next_cursor`.
+
 ## [0.4.0] - 2026-07-25
 
 ### Added
