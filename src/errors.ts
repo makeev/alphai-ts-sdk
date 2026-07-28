@@ -120,7 +120,9 @@ export class BadRequestError extends AlphaAIAPIError {
           if (!isRecord(entry)) continue;
           const loc = entry.loc;
           const key = Array.isArray(loc) ? loc.map(String).join(".") : "_";
-          (normalised[key] ??= []).push(String(entry.msg ?? ""));
+          const messages = normalised[key] ?? [];
+          messages.push(String(entry.msg ?? ""));
+          normalised[key] = messages;
         }
         this.fields = normalised;
       }
