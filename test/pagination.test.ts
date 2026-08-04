@@ -109,3 +109,57 @@ describe("delta polling (sort: ingested)", () => {
     expect(new URL(fetchImpl.calls[0].url).searchParams.get("cursor")).toBe("saved");
   });
 });
+
+describe("pagination in ingested mode", () => {
+  // A caught-up ingested poll parks the position at the GLOBAL feed head, which
+  // advances whenever any row is ingested — not just one matching the filter.
+  // So the cursor keeps moving across empty pages and cannot terminate a run.
+  it("stops on the first empty page even while the cursor keeps advancing", async () => {
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [article], next_cursor: "head_1" })
+        : jsonResponse({ results: [], next_cursor: `head_${call}` }),
+    );
+    const client = makeClient(fetchImpl);
+
+    const collected = [];
+    for await (const a of client.news.iterate({ symbol: "RARE", sort: "ingested" }))
+      collected.push(a);
+
+    expect(collected).toHaveLength(1);
+    expect(fetchImpl.calls).toHaveLength(2); // was unbounded: cursor never repeated
+  });
+
+  it("does not stop on an empty page in published mode", async () => {
+    // Published mode advances by SCANNED rows, so an empty page can still have
+    // more behind it — stopping there would truncate the feed.
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [], next_cursor: "c2" })
+        : jsonResponse({ results: [article], next_cursor: null }),
+    );
+    const client = makeClient(fetchImpl);
+
+    const collected = [];
+    for await (const a of client.news.iterate()) collected.push(a);
+
+    expect(collected).toHaveLength(1);
+    expect(fetchImpl.calls).toHaveLength(2);
+  });
+
+  it("forwards sort to the insider feed and terminates there too", async () => {
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [article], next_cursor: "h1" })
+        : jsonResponse({ results: [], next_cursor: `h${call}` }),
+    );
+    const client = makeClient(fetchImpl);
+
+    const collected = [];
+    for await (const a of client.news.iterateInsider({ sort: "ingested" })) collected.push(a);
+
+    expect(collected).toHaveLength(1);
+    expect(fetchImpl.calls).toHaveLength(2);
+    expect(new URL(fetchImpl.calls[0].url).searchParams.get("sort")).toBe("ingested");
+  });
+});

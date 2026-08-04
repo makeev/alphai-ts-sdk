@@ -301,12 +301,20 @@ export interface NewsListOptions extends RequestOptions {
   minRelevance?: number;
   /** Collapse reprints into a single story (sends `collapse=story`). */
   collapseStories?: boolean;
-  /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
+  /**
+   * Items per page. 1–20 on any key (server default 10); 21–50 needs a Pro
+   * key, and anything outside 1–50 is a `400`. Sends `page_size`.
+   *
+   * This is the main dial for keeping a poller current: one call returns one
+   * page, so a poller that drains slower than the feed publishes drifts
+   * backwards and its articles start reading as hours old.
+   */
   pageSize?: number;
   /**
    * Feed ordering; see {@link NewsSort}. With `"ingested"`, `next_cursor` is
-   * always set and an empty `results` means "caught up" - store the cursor and
-   * call again later.
+   * always set — it is a polling position, never an end-of-feed marker — so an
+   * empty `results` is the only "caught up" signal. Store the cursor and call
+   * again later.
    */
   sort?: NewsSort;
 }
@@ -329,8 +337,17 @@ export interface InsiderListOptions extends RequestOptions {
    * this acts as an "only large trades" filter. Sends `min_relevance`.
    */
   minRelevance?: number;
-  /** Items per page: 10 (default) or 50 (Pro keys only). Sends `page_size`. */
+  /**
+   * Items per page. 1–20 on any key (server default 10); 21–50 needs a Pro
+   * key. Sends `page_size`.
+   */
   pageSize?: number;
+  /**
+   * Feed ordering; see {@link NewsSort}. The insider feed supports delta
+   * polling under the same contract as the main feed, with its own cursor
+   * family.
+   */
+  sort?: NewsSort;
 }
 
 /** Options for {@link NewsResource.iterateInsider}. */

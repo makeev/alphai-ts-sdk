@@ -66,10 +66,10 @@ export class NewsResource {
    * Iterate the main feed across pages, following `next_cursor` automatically.
    * Honors optional `maxItems` / `maxPages` caps, and `cursor` to resume.
    *
-   * With `sort: "ingested"` this drains what is currently new and stops once
-   * the position stops advancing (delta mode has no null cursor). `sort` is
-   * threaded onto every page, so the run never replays a cursor into the other
-   * mode.
+   * With `sort: "ingested"` this drains what is currently new and stops on the
+   * first empty page (delta mode has no null cursor, and its cursor keeps
+   * advancing even when nothing matched). `sort` is threaded onto every page,
+   * so the run never replays a cursor into the other mode.
    */
   iterate(options: NewsIterateOptions = {}): AsyncGenerator<RichNewsArticle> {
     const { maxItems, maxPages, cursor, ...rest } = options;
@@ -77,6 +77,7 @@ export class NewsResource {
       initialCursor: cursor,
       maxItems,
       maxPages,
+      stopOnEmptyPage: rest.sort === "ingested",
     });
   }
 
@@ -90,7 +91,12 @@ export class NewsResource {
     });
   }
 
-  /** `GET /api/news/insider/` — the `category=insider` feed (SEC Form 4 filings). */
+  /**
+   * `GET /api/news/insider/` — the `category=insider` feed (SEC Form 4 filings).
+   *
+   * Supports `sort: "ingested"` under the same delta-polling contract as
+   * {@link NewsResource.list}, with its own cursor family.
+   */
   insider(options: InsiderListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/insider/", {
       query: {
@@ -98,6 +104,7 @@ export class NewsResource {
         symbol: options.symbol,
         min_relevance: options.minRelevance,
         page_size: options.pageSize,
+        sort: options.sort,
       },
       signal: options.signal,
     });
@@ -110,6 +117,7 @@ export class NewsResource {
       initialCursor: cursor,
       maxItems,
       maxPages,
+      stopOnEmptyPage: rest.sort === "ingested",
     });
   }
 

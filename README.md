@@ -68,7 +68,7 @@ const page = await client.news.list({
   excludeCategories: ["crypto"],
   minRelevance: 7,                   // 1–10
   collapseStories: true,             // collapse reprints into one story
-  pageSize: 50,                      // 10 default; 50 needs a Pro key
+  pageSize: 20,                      // 10 default; 1-20 any key, 21-50 needs Pro
   cursor,                            // opaque cursor from a previous page
 });
 console.log(page.results, page.next_cursor);
@@ -151,17 +151,34 @@ end-of-feed marker:
 ```ts
 let cursor = await loadCursor(); // undefined on the first run
 
-const page = await client.news.list({ sort: "ingested", cursor, symbol: "NVDA" });
+const page = await client.news.list({
+  sort: "ingested",
+  cursor,
+  symbol: "NVDA",
+  pageSize: 20,
+  minRelevance: 7,
+});
 for (const article of page.results) {
   handle(article); // article.original.created_at = when we received it
 }
 await saveCursor(page.next_cursor); // always set; empty results = caught up
+
+// Branch on the results, never on the cursor: in this mode `next_cursor` is a
+// polling position and is never null, so it says nothing about being done.
+if (page.results.length === 0) await sleepUntilNextPoll();
 ```
 
 Send the same `sort` on every call of a run. Each mode mints its own cursor
 family, so replaying an ingested cursor into the default mode is a `400`, not a
-silent restart. `iterate({ sort: "ingested" })` threads it for you and stops once
-the position stops advancing.
+silent restart. `iterate({ sort: "ingested" })` threads it for you and stops on
+the first empty page.
+
+**Keep up with the feed.** One call returns one page, so a poller that drains
+slower than the feed publishes drifts backwards and its articles start reading
+as hours old — the data is current, the position is not. Raise `pageSize` and
+narrow the stream (`minRelevance`, `symbol`, `category`) until a single poll
+covers a single interval, and remember that the per-day call cap bounds how much
+of the feed a plan can drain at all.
 
 On Free and Basic the archive horizon applies to where a poll *resumes*, so a
 cursor left unused for longer than your window comes back `403`

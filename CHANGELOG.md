@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-04
+
+### Fixed
+- `news.iterate({ sort: "ingested" })` and `news.iterateInsider(...)` could run
+  without bound. The paginator stopped when `next_cursor` repeated, on the
+  assumption that a caught-up delta poll returns the same cursor it was given.
+  It does not: a caught-up poll parks the position at the **global** feed head,
+  which advances whenever any row is ingested — not just one matching the
+  caller's filter. A filtered drain (`symbol: "RARE"`) therefore kept fetching
+  empty pages for as long as rows kept landing, burning rate-limit budget. Both
+  now stop on the first empty page, which is the mode's real "caught up"
+  signal. Published mode is unchanged: an empty page there can still have more
+  behind it, so stopping on it would truncate the feed.
+
+### Added
+- `sort` on `news.insider()` / `news.iterateInsider()`. The insider feed has
+  supported delta polling all along; the SDK simply could not ask for it.
+- `PaginateOptions.stopOnEmptyPage` for callers driving `paginate()` directly.
+
+### Changed
+- `pageSize` documentation was wrong in the types and the README: it said "10
+  (default) or 50 (Pro keys only)". The API accepts any size in 1–20 on any key
+  and 21–50 on Pro. The wrong text hid the setting that keeps a poller current.
+- README: a delta-polling section on falling behind — why a slow poller sees
+  hours-old timestamps, and which dials fix it.
+
 ## [0.4.1] - 2026-07-28
 
 ### Added
