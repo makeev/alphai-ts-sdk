@@ -78,6 +78,18 @@ for await (const article of client.news.iterate({ symbol: "NVDA", maxItems: 100 
   // …
 }
 
+// A publication window: inclusive bounds on time_published, same names as the
+// MCP tools. A bare "YYYY-MM-DD" string means the WHOLE day (the server reads
+// a bare toDate as that day's end, so equal bounds return the day); a Date is
+// an exact instant. Works on news.list/iterate and news.insider/iterateInsider
+// in the default published mode only (a window with sort: "ingested" is a 400),
+// and respects the key's archive depth (past the horizon is a 403).
+const july = await client.news.list({
+  symbol: "NVDA",
+  fromDate: "2026-07-01",
+  toDate: "2026-07-31",
+});
+
 // Trending: up to 10 ranked stories from the last 48h (not paginated).
 const trending = await client.news.trending();
 
@@ -243,7 +255,7 @@ Pass `maxRetries: 0` to disable retries.
 Limits are per account and two-layer — a per-minute burst plus a per-day volume
 cap: **Free 20/min · 100/day / Basic 60/min · 10,000/day / Pro 150/min ·
 100,000/day**. News-archive depth is tiered too (Free 30 days / Basic 90 / Pro
-full archive; deeper pagination returns `403`). Every keyed response carries `X-RateLimit-Limit`,
+180; deeper pagination — or a `fromDate` past the horizon — returns `403`). Every keyed response carries `X-RateLimit-Limit`,
 `X-RateLimit-Remaining`, and `X-RateLimit-Reset` (epoch seconds). The SDK captures
 them after each call:
 

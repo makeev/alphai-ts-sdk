@@ -38,6 +38,7 @@ export type {
   EnrichedArticle,
   ImpactAnalysis,
   IndirectMarketEffects,
+  DateBound,
   InsiderIterateOptions,
   InsiderListOptions,
   KeyEntity,

@@ -135,3 +135,65 @@ describe("query param serialization", () => {
     expect(headers.Accept).toBe("application/json");
   });
 });
+
+describe("fromDate / toDate window (v0.5.0)", () => {
+  it("passes bare-date strings through verbatim on both feeds", async () => {
+    // The bare form is load-bearing: the server reads a bare to_date as the
+    // END of that day, so the SDK must never rewrite a caller's string.
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({ fromDate: "2026-07-01", toDate: "2026-07-31" });
+    await client.news.insider({ fromDate: "2026-07-01", toDate: "2026-07-31" });
+
+    for (const call of fetchImpl.calls) {
+      const url = new URL(call.url);
+      expect(url.searchParams.get("from_date")).toBe("2026-07-01");
+      expect(url.searchParams.get("to_date")).toBe("2026-07-31");
+    }
+    expect(new URL(fetchImpl.calls[1].url).pathname).toBe("/api/news/insider/");
+  });
+
+  it("serializes a Date as the exact instant in UTC", async () => {
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({ fromDate: new Date(Date.UTC(2026, 6, 1, 9, 30)) });
+
+    const url = new URL(fetchImpl.calls[0].url);
+    expect(url.searchParams.get("from_date")).toBe("2026-07-01T09:30:00.000Z");
+  });
+
+  it("omits the window when not given", async () => {
+    const fetchImpl = mockFetch(emptyPage);
+    const client = makeClient(fetchImpl);
+
+    await client.news.list({});
+
+    const url = new URL(fetchImpl.calls[0].url);
+    expect(url.searchParams.has("from_date")).toBe(false);
+    expect(url.searchParams.has("to_date")).toBe(false);
+  });
+
+  it("threads the window onto every page of an iteration", async () => {
+    // A window dropped after page one would silently widen the walk back into
+    // history the caller asked to bound.
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse({ results: [], next_cursor: "cur1" })
+        : jsonResponse({ results: [], next_cursor: null }),
+    );
+    const client = makeClient(fetchImpl);
+
+    for await (const _ of client.news.iterate({ fromDate: "2026-07-01", toDate: "2026-07-31" })) {
+      // drain
+    }
+
+    expect(fetchImpl.calls.length).toBe(2);
+    for (const call of fetchImpl.calls) {
+      const url = new URL(call.url);
+      expect(url.searchParams.get("from_date")).toBe("2026-07-01");
+      expect(url.searchParams.get("to_date")).toBe("2026-07-31");
+    }
+  });
+});

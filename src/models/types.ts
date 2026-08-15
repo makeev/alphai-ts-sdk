@@ -288,6 +288,15 @@ export interface RequestOptions {
  */
 export type NewsSort = "published" | "ingested";
 
+/**
+ * A `fromDate` / `toDate` window bound. A bare `"YYYY-MM-DD"` string means the
+ * WHOLE day — the server reads a bare `to_date` as that day's end, so equal
+ * bounds return the day rather than an empty page. A `Date` is an exact
+ * instant (serialized with `toISOString()`, always UTC); a datetime string
+ * without an offset is read as UTC by the server.
+ */
+export type DateBound = string | Date;
+
 export interface NewsListOptions extends RequestOptions {
   /** Opaque pagination cursor from a previous page's `next_cursor`. */
   cursor?: string;
@@ -317,6 +326,15 @@ export interface NewsListOptions extends RequestOptions {
    * again later.
    */
   sort?: NewsSort;
+  /**
+   * Inclusive lower bound on `time_published`; see {@link DateBound}. Sends
+   * `from_date`. A window reaching past the key's archive horizon is a `403`
+   * on the first page, and a window cannot be combined with
+   * `sort: "ingested"` (`400`) — delta polling never walks back into history.
+   */
+  fromDate?: DateBound;
+  /** Inclusive upper bound on `time_published`; see {@link DateBound}. Sends `to_date`. */
+  toDate?: DateBound;
 }
 
 /** Options for {@link NewsResource.iterate}. */
@@ -348,6 +366,15 @@ export interface InsiderListOptions extends RequestOptions {
    * family.
    */
   sort?: NewsSort;
+  /**
+   * Inclusive lower bound on `time_published` — when the filing reached the
+   * feed, NOT the trade date inside the `insider` block (a Form 4 is filed
+   * days after the trade). Same window semantics as the main feed; see
+   * {@link DateBound}. Sends `from_date`.
+   */
+  fromDate?: DateBound;
+  /** Inclusive upper bound, same clock as `fromDate`. Sends `to_date`. */
+  toDate?: DateBound;
 }
 
 /** Options for {@link NewsResource.iterateInsider}. */

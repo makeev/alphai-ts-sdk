@@ -1,6 +1,7 @@
 import type { HttpClient, QueryParams } from "../http";
 import type {
   CategoryFilter,
+  DateBound,
   InsiderIterateOptions,
   InsiderListOptions,
   NewsIterateOptions,
@@ -10,6 +11,16 @@ import type {
   RichNewsArticle,
 } from "../models/types";
 import { paginate } from "../pagination";
+
+/**
+ * Serialize a `fromDate` / `toDate` bound. Strings pass through untouched so
+ * the bare `"YYYY-MM-DD"` whole-day form (and any server-accepted ISO
+ * spelling) survives verbatim; a `Date` becomes the exact instant in UTC.
+ */
+function dateParam(value: DateBound | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return value instanceof Date ? value.toISOString() : value;
+}
 
 /** Normalize a category filter (single / array / CSV string) into a string array. */
 function normalizeCategories(value: CategoryFilter | undefined): string[] | undefined {
@@ -35,6 +46,8 @@ function newsQuery(options: NewsListOptions): QueryParams {
     collapse: options.collapseStories ? "story" : undefined,
     page_size: options.pageSize,
     sort: options.sort,
+    from_date: dateParam(options.fromDate),
+    to_date: dateParam(options.toDate),
   };
 }
 
@@ -105,6 +118,8 @@ export class NewsResource {
         min_relevance: options.minRelevance,
         page_size: options.pageSize,
         sort: options.sort,
+        from_date: dateParam(options.fromDate),
+        to_date: dateParam(options.toDate),
       },
       signal: options.signal,
     });
