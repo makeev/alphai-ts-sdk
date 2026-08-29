@@ -1,8 +1,10 @@
 import type { HttpClient } from "../http";
 import type {
   Symbol as AlphaSymbol,
+  LatestEarningsPointer,
   RequestOptions,
   SymbolsListOptions,
+  TickerEarningsHistory,
   TickerInsiderSummary,
   TickerSentimentSummary,
 } from "../models/types";
@@ -51,6 +53,34 @@ export class SymbolsResource {
     if (!ticker) throw new TypeError("symbols.insiderSummary(ticker): `ticker` is required");
     return this.http.request<TickerInsiderSummary>(
       `/api/symbols/${encodeURIComponent(ticker)}/insider-summary/`,
+      { signal: options.signal },
+    );
+  }
+
+  /**
+   * `GET /api/symbols/{ticker}/earnings/` — a ticker's published earnings
+   * reads, newest first (capped at 20), plus its company-confirmed next report
+   * date. An empty `reports` array is a normal answer, not an error; it means
+   * no read has been published yet. `next_report_date` is `null` when AlphaAI
+   * holds no confirmed date — never an estimate.
+   */
+  earnings(ticker: string, options: RequestOptions = {}): Promise<TickerEarningsHistory> {
+    if (!ticker) throw new TypeError("symbols.earnings(ticker): `ticker` is required");
+    return this.http.request<TickerEarningsHistory>(
+      `/api/symbols/${encodeURIComponent(ticker)}/earnings/`,
+      { signal: options.signal },
+    );
+  }
+
+  /**
+   * `GET /api/symbols/{ticker}/earnings/latest/` — pointer to the most recent
+   * earnings read. Resolve the full read via `news.get(pointer.uid)`. Throws
+   * `NotFoundError` for an unknown ticker (error code `unknown_symbol`).
+   */
+  earningsLatest(ticker: string, options: RequestOptions = {}): Promise<LatestEarningsPointer> {
+    if (!ticker) throw new TypeError("symbols.earningsLatest(ticker): `ticker` is required");
+    return this.http.request<LatestEarningsPointer>(
+      `/api/symbols/${encodeURIComponent(ticker)}/earnings/latest/`,
       { signal: options.signal },
     );
   }

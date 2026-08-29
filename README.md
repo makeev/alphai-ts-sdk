@@ -13,7 +13,7 @@ for AI agents and trading bots.
   rate-limit inspection.
 - **Dual module** — ships ESM + CJS with `.d.ts`.
 
-> Wraps the 9 documented public REST endpoints 1:1. API-key management (create /
+> Wraps the 11 documented public REST endpoints 1:1. API-key management (create /
 > revoke) happens on the website at `/account/api-keys` — this SDK only *consumes* a key.
 
 ## Install
@@ -126,6 +126,18 @@ const sentiment = await client.symbols.sentimentSummary("AAPL");
 // 30-day Form 4 rollup. Money fields are decimal STRINGS.
 const insider = await client.symbols.insiderSummary("AAPL");
 console.log(insider.buy_value_usd); // e.g. "1284500.00" — a string, not a number
+
+// Earnings reads: AlphaAI's structured, filing-verified analysis per quarter.
+const earnings = await client.symbols.earnings("AAPL");
+console.log(earnings.next_report_date); // "2026-10-29" or null (never an estimate)
+for (const read of earnings.reports) {
+  // read.source_type: "sec_form8k" (US 8-K item 2.02) | "sec_form6k" (FPI 6-K)
+  console.log(read.fiscal_period, read.analysis.verdict, read.analysis.key_metrics[0].value);
+}
+
+// Latest-read pointer, for the article link.
+const latest = await client.symbols.earningsLatest("AAPL");
+const article = await client.news.get(latest.uid);
 ```
 
 > **Type-name note:** the symbol model is exported as `Symbol`, which shadows the

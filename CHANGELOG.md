@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `DateBound` type. The SDK passes through; the server enforces the rest
   (window past the plan's archive horizon = 403 on the first page, window
   with `sort: "ingested"` = 400).
+- `symbols.earnings(ticker)` and `symbols.earningsLatest(ticker)`, mirroring
+  `GET /api/symbols/{ticker}/earnings/` and `…/earnings/latest/`. Typed via
+  `TickerEarningsHistory` (reads newest first, capped at 20, plus
+  `next_report_date`), `EarningsRead`, `EarningsReport`, and
+  `LatestEarningsPointer`; an empty `reports` array is a normal answer, not an
+  error. `Symbol.next_report_date` — the company-confirmed next earnings date
+  (`string | null` in the `YYYY-MM-DD` form, never an estimate; detail
+  responses only).
 
 ## [0.4.2] - 2026-08-04
 

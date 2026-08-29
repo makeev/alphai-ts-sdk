@@ -195,6 +195,12 @@ export interface Symbol {
   supports_insider?: boolean;
   /** Optional TradingView-symbol override; usually `""`. */
   tv_symbol?: string;
+  /**
+   * Company-confirmed date of the next earnings report, `YYYY-MM-DD`, or `null`
+   * when AlphaAI holds no confirmed date — never an estimate. Detail responses
+   * only.
+   */
+  next_report_date?: string | null;
   description?: string;
   website?: string | null;
 }
@@ -243,6 +249,131 @@ export interface TickerInsiderSummary {
   /** Percentage (0–100) of transactions under a 10b5-1 plan. */
   pct_10b5_1: number;
   top_insiders: TopInsider[];
+}
+
+// ---------------------------------------------------------------------------
+// Earnings
+// ---------------------------------------------------------------------------
+
+/** The filing kind of an earnings read. */
+export type EarningsSourceType = "sec_form8k" | "sec_form6k" | (string & {});
+
+/** The rollup verdict on an earnings read. */
+export type EarningsVerdict = "strong" | "solid" | "mixed" | "weak" | (string & {});
+
+/** One headline figure from an earnings release, as reported. */
+export interface KeyMetric {
+  name: string;
+  /** Figure as reported, e.g. `"$96.2 billion"`. */
+  value: string;
+  /** `"GAAP"`, `"non-GAAP"`, or `"other"`. */
+  basis?: string;
+  prior_year?: string | null;
+  prior_quarter?: string | null;
+  yoy_change?: string | null;
+  qoq_change?: string | null;
+}
+
+/** One reporting segment and what drove it. */
+export interface Segment {
+  name: string;
+  revenue: string;
+  yoy_change?: string | null;
+  qoq_change?: string | null;
+  driver?: string;
+}
+
+/** Company guidance for the coming period (`null` when not disclosed). */
+export interface Guidance {
+  period?: string;
+  revenue?: string | null;
+  gross_margin?: string | null;
+  operating_expenses?: string | null;
+  tax_rate?: string | null;
+  other?: string[];
+}
+
+/** A reported figure against the company's own prior outlook. */
+export interface VsPriorGuidance {
+  metric?: string;
+  prior_guidance?: string;
+  actual?: string;
+  verdict?: string;
+}
+
+/** A management quote surfaced from the filing. */
+export interface Quote {
+  speaker: string;
+  role?: string | null;
+  text: string;
+}
+
+/**
+ * AlphaAI's structured read of an earnings release, produced from the
+ * company's own SEC filing — an 8-K item 2.02 for US filers, a 6-K earnings
+ * release for foreign private issuers — with every figure checked against the
+ * filing text. Consensus estimates and price targets are deliberately absent.
+ */
+export interface EarningsReport {
+  company: string;
+  ticker: string;
+  fiscal_period: string;
+  /** YYYY-MM-DD, or `null` when the filing does not state one. */
+  period_end?: string | null;
+  headline: string;
+  verdict: EarningsVerdict;
+  verdict_reason?: string;
+  key_metrics: KeyMetric[];
+  segments?: Segment[];
+  guidance?: Guidance | null;
+  vs_prior_guidance?: VsPriorGuidance[];
+  capital_returns?: string[];
+  balance_sheet_cash_flow?: string[];
+  drivers?: string[];
+  concerns?: string[];
+  what_to_watch?: string[];
+  quotes?: Quote[];
+  analysis?: string;
+  /** What the filing did NOT state, named rather than guessed. */
+  missing_items?: string[];
+  numbers_verified_from_document?: boolean;
+}
+
+/**
+ * One published earnings read in a ticker's history. `ticker` is the share
+ * class the filing was actually made under, which share-class bridging may
+ * render as a class you did not ask for.
+ */
+export interface EarningsRead {
+  /** Article uid; the same read is served by `GET /api/news/{uid}/`. */
+  uid: string;
+  /** ISO 8601 timestamp. */
+  time_published: string;
+  title: string;
+  source_type: EarningsSourceType;
+  ticker: string;
+  fiscal_period: string;
+  analysis: EarningsReport;
+}
+
+/** Pointer to a ticker's most recent earnings read (for the article link). */
+export interface LatestEarningsPointer {
+  uid: string;
+  /** ISO 8601 timestamp. */
+  time_published: string;
+  title: string;
+  fiscal_period: string;
+  verdict: EarningsVerdict;
+  headline: string;
+}
+
+/** Endpoint `/api/symbols/{ticker}/earnings/` — reads newest first, capped at 20. */
+export interface TickerEarningsHistory {
+  ticker: string;
+  /** Empty when no read exists yet — a normal answer, not an error. */
+  reports: EarningsRead[];
+  /** Company-confirmed next report date, `YYYY-MM-DD` or `null`. */
+  next_report_date: string | null;
 }
 
 // ---------------------------------------------------------------------------
