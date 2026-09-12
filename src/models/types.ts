@@ -288,6 +288,19 @@ export interface KeyMetric {
   prior_quarter?: string | null;
   yoy_change?: string | null;
   qoq_change?: string | null;
+  /**
+   * `value` as a number at the scale it was printed, sign applied; `null` when
+   * the string carries no figure (API 1.34.0, 2026-09-12).
+   */
+  numeric?: number | null;
+  /** ISO-style currency code (`"USD"`, `"EUR"`…), `"pct"`, `"bp"`, or `null` for a plain count. */
+  unit?: string | null;
+  /**
+   * The multiplier `numeric` is expressed in: `"ones"` | `"thousands"` |
+   * `"millions"` | `"billions"` | `"trillions"`. `null` when the filing did not
+   * say — treat as unknown, never assume millions.
+   */
+  scale?: "ones" | "thousands" | "millions" | "billions" | "trillions" | null;
 }
 
 /** One reporting segment and what drove it. */

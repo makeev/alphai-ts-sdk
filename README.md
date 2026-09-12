@@ -138,6 +138,10 @@ for (const read of earnings.reports) {
   console.log(read.fiscal_period, a.verdict, a.key_metrics[0].name, a.key_metrics[0].value);
 }
 
+// Each key_metrics row keeps `value` as printed and adds numeric / unit / scale
+// ("$19,345" -> 19345, "USD", "millions" when the filing's table header says so);
+// scale is null when the filing did not say. Don't assume millions.
+
 // Latest-read pointer, for the article link. `null` when no read exists yet (HTTP 204).
 const latest = await client.symbols.earningsLatest("AAPL");
 if (latest) {
