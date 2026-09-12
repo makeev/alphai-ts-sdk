@@ -131,4 +131,16 @@ describe("symbols endpoints", () => {
 
     expect(fetch.calls[0].url).toContain("search=bitcoin");
   });
+
+  it("types the key_metrics companions and tolerates their absence", async () => {
+    const client = makeClient(mockFetch(() => jsonResponse(earnings)));
+
+    const history = await client.symbols.earnings("AAPL");
+    const metrics = history.reports[0].analysis.key_metrics;
+
+    expect(metrics[0].numeric).toBe(96221);
+    expect(metrics[0].unit).toBe("USD");
+    expect(metrics[0].scale).toBe("millions");
+    expect(metrics[metrics.length - 1].scale).toBeUndefined();
+  });
 });
