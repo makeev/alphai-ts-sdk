@@ -33,7 +33,7 @@ export class HttpClient {
       Accept: "application/json",
       "User-Agent": this.cfg.userAgent,
     };
-    const { fetch: fetchImpl, maxRetries, timeout, backoffFactor } = this.cfg;
+    const { fetch: fetchImpl, maxRetries, timeout, backoffFactor, maxRetryAfter } = this.cfg;
     const userSignal = config.signal;
 
     let attempt = 0;
@@ -75,6 +75,11 @@ export class HttpClient {
       if (rateLimit) this.lastRateLimit = rateLimit;
 
       if (response.ok) {
+        if (response.status === 204) {
+          // Documented "nothing here yet" (e.g. /earnings/latest/ before a read exists).
+          drain(response);
+          return null as T;
+        }
         return (await parseBody(response)) as T;
       }
 
@@ -83,7 +88,7 @@ export class HttpClient {
         const retryAfter = parseRetryAfter(response.headers);
         const delay =
           response.status === 429 && retryAfter !== null
-            ? retryAfter * 1000
+            ? Math.min(retryAfter, maxRetryAfter) * 1000
             : backoffDelay(attempt, backoffFactor);
         drain(response);
         await sleep(delay);

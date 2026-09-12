@@ -61,7 +61,7 @@ export class NewsResource {
 
   /**
    * `GET /api/news/` — the main feed, newest first. Defaults server-side to
-   * `relevance_score >= 6` and at least one ticker. Returns one page.
+   * `relevance_score >= 4` and at least one ticker. Returns one page.
    *
    * Pass `sort: "ingested"` to poll for what is new instead of reading the top
    * of the feed: rows come back in arrival order, `next_cursor` is always set,

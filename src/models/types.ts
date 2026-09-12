@@ -203,6 +203,22 @@ export interface Symbol {
   next_report_date?: string | null;
   description?: string;
   website?: string | null;
+  /** Lowercase names the issuer is known by when they differ from `name`. List responses only. */
+  brand_aliases?: string[];
+  /**
+   * The coin's ticker when this symbol's bare string also names an active
+   * cryptocurrency (`BTC` the Grayscale ETF → `BTC-USD`); `null` otherwise.
+   * Detail responses only.
+   */
+  crypto_counterpart?: string | null;
+  /** Display name of `crypto_counterpart`; `""` when it is null. Detail responses only. */
+  crypto_counterpart_name?: string;
+  /** `"active"` or `"delisted"`. Delisted symbols stay resolvable so their history remains reachable. */
+  status?: "active" | "delisted";
+  /** When the symbol was marked delisted (ISO datetime); `null` for active symbols and for delistings before July 2026. */
+  delisted_at?: string | null;
+  /** Successor ticker when a delisted company continues under a new symbol; `""` otherwise. */
+  renamed_to?: string;
 }
 
 export interface DailySentimentBucket {
@@ -520,4 +536,10 @@ export interface SymbolsListOptions extends RequestOptions {
   limit?: number;
   /** Offset into the alphabetical list, ≥0. */
   offset?: number;
+  /**
+   * Resolve a name, brand or ticker prefix to its canonical symbol
+   * (`"bitcoin"` → `BTC-USD`, `"spacex"` → `SPCX`) — the lookup a 404
+   * `unknown_symbol` error points you to.
+   */
+  search?: string;
 }

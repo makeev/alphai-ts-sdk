@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-12
+
+### Fixed
+- `symbols.earningsLatest(ticker)` resolves to `null` when the API answers
+  **204** (no read published yet) instead of an untyped `undefined` that made
+  `latest.uid` throw. Any 204 now resolves to `null` from the transport.
+- `Retry-After` is capped by a new `maxRetryAfter` option (default `60` s, the
+  API's own ceiling for a burst block) so a per-day 429 advertising up to 3600 s
+  cannot park a retry for an hour.
+
+### Added
+- `symbols.list({ search })` — the name / brand / ticker-prefix lookup the API
+  points you to on a 404 `unknown_symbol` (`"bitcoin"` → `BTC-USD`).
+- Typed `Symbol` fields the API already sent: `status`, `delisted_at`,
+  `renamed_to`, `brand_aliases`, `crypto_counterpart`, `crypto_counterpart_name`.
+
+### Docs
+- README: guard `read.analysis` and an empty `key_metrics`; `.allowedParams` on
+  `BadRequestError`; the insider feed is Form 4 only; honest endpoint count
+  (11 of 17). JSDoc: the server-side relevance floor is 4, not 6.
+
 ## [0.5.0] - 2026-08-15
 
 ### Added

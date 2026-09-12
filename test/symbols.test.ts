@@ -109,10 +109,26 @@ describe("symbols endpoints", () => {
     const client = makeClient(fetch);
 
     const pointer = await client.symbols.earningsLatest("AAPL");
+    if (!pointer) throw new Error("expected a pointer, got null");
 
     expect(pointer.uid).toBe("352613cc3f6089cc");
     expect(pointer.verdict).toBe("solid");
     expect(pointer.fiscal_period).toBe("Third Quarter Fiscal 2026");
     expect(fetch.calls[0].url).toContain("/api/symbols/AAPL/earnings/latest/");
+  });
+
+  it("resolves the latest-earnings pointer to null on 204", async () => {
+    const client = makeClient(mockFetch(() => new Response(null, { status: 204 })));
+
+    await expect(client.symbols.earningsLatest("MU")).resolves.toBeNull();
+  });
+
+  it("passes search through to the symbols list", async () => {
+    const fetch = mockFetch(() => jsonResponse(symbols));
+    const client = makeClient(fetch);
+
+    await client.symbols.list({ search: "bitcoin" });
+
+    expect(fetch.calls[0].url).toContain("search=bitcoin");
   });
 });

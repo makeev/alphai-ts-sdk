@@ -20,7 +20,7 @@ export class SymbolsResource {
   /** `GET /api/symbols/` — all active tickers, alphabetical (~10k). */
   list(options: SymbolsListOptions = {}): Promise<AlphaSymbol[]> {
     return this.http.request<AlphaSymbol[]>("/api/symbols/", {
-      query: { limit: options.limit, offset: options.offset },
+      query: { limit: options.limit, offset: options.offset, search: options.search },
       signal: options.signal,
     });
   }
@@ -76,10 +76,15 @@ export class SymbolsResource {
    * `GET /api/symbols/{ticker}/earnings/latest/` — pointer to the most recent
    * earnings read. Resolve the full read via `news.get(pointer.uid)`. Throws
    * `NotFoundError` for an unknown ticker (error code `unknown_symbol`).
+   * Resolves to `null` when no read has been published for the ticker yet
+   * (the API answers 204).
    */
-  earningsLatest(ticker: string, options: RequestOptions = {}): Promise<LatestEarningsPointer> {
+  earningsLatest(
+    ticker: string,
+    options: RequestOptions = {},
+  ): Promise<LatestEarningsPointer | null> {
     if (!ticker) throw new TypeError("symbols.earningsLatest(ticker): `ticker` is required");
-    return this.http.request<LatestEarningsPointer>(
+    return this.http.request<LatestEarningsPointer | null>(
       `/api/symbols/${encodeURIComponent(ticker)}/earnings/latest/`,
       { signal: options.signal },
     );

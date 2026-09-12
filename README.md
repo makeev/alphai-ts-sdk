@@ -13,7 +13,7 @@ for AI agents and trading bots.
   rate-limit inspection.
 - **Dual module** — ships ESM + CJS with `.d.ts`.
 
-> Wraps the 11 documented public REST endpoints 1:1. API-key management (create /
+> Wraps the news and symbol endpoints 1:1 (11 of the 17 in the spec; calendar, macro and insider-trades are a plain `fetch` away). API-key management (create /
 > revoke) happens on the website at `/account/api-keys` — this SDK only *consumes* a key.
 
 ## Install
@@ -93,7 +93,7 @@ const july = await client.news.list({
 // Trending: up to 10 ranked stories from the last 48h (not paginated).
 const trending = await client.news.trending();
 
-// Insider feed (SEC Form 4 + institutional stakes).
+// Insider feed (SEC Form 4 filings).
 const insider = await client.news.insider({ symbol: "NVDA" });
 for await (const article of client.news.iterateInsider({ symbol: "NVDA" })) {
   // …
@@ -109,6 +109,7 @@ const related = await client.news.related("a1b2c3d4e5f60718");
 ```ts
 // All active tickers, alphabetical (~10k). Page with limit/offset.
 const symbols = await client.symbols.list({ limit: 500, offset: 0 });
+const hits = await client.symbols.list({ search: "bitcoin" }); // name / brand / prefix lookup → BTC-USD
 
 // Symbol detail (throws NotFoundError for an unknown ticker).
 const aapl = await client.symbols.get("AAPL");
@@ -132,12 +133,16 @@ const earnings = await client.symbols.earnings("AAPL");
 console.log(earnings.next_report_date); // "2026-10-29" or null (never an estimate)
 for (const read of earnings.reports) {
   // read.source_type: "sec_form8k" (US 8-K item 2.02) | "sec_form6k" (FPI 6-K)
-  console.log(read.fiscal_period, read.analysis.verdict, read.analysis.key_metrics[0].value);
+  const a = read.analysis; // may be null; key_metrics may be empty
+  if (!a || a.key_metrics.length === 0) continue;
+  console.log(read.fiscal_period, a.verdict, a.key_metrics[0].name, a.key_metrics[0].value);
 }
 
-// Latest-read pointer, for the article link.
+// Latest-read pointer, for the article link. `null` when no read exists yet (HTTP 204).
 const latest = await client.symbols.earningsLatest("AAPL");
-const article = await client.news.get(latest.uid);
+if (latest) {
+  const article = await client.news.get(latest.uid);
+}
 ```
 
 > **Type-name note:** the symbol model is exported as `Symbol`, which shadows the
@@ -215,7 +220,7 @@ Every non-2xx response is mapped to a typed error. All extend `AlphaAIError`.
 
 | Class | When | Notable fields |
 |---|---|---|
-| `BadRequestError` | 400 | `.fields` (per-field validation messages) |
+| `BadRequestError` | 400 | `.fields` (per-field validation messages), `.allowedParams` (the endpoint's real parameter names when you sent an unknown one) |
 | `AuthenticationError` | 401 | — |
 | `PermissionDeniedError` | 403 | — |
 | `NotFoundError` | 404 | — |

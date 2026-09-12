@@ -63,4 +63,19 @@ describe("retry policy", () => {
     await expect(client.news.trending()).rejects.toBeInstanceOf(ServerError);
     expect(fetchImpl.calls).toHaveLength(1);
   });
+
+  it("caps a Retry-After above maxRetryAfter", async () => {
+    const fetchImpl = mockFetch((_url, _init, call) =>
+      call === 1
+        ? jsonResponse(
+            { message: "slow down" },
+            { status: 429, headers: { "retry-after": "3600" } },
+          )
+        : jsonResponse([]),
+    );
+    const client = makeClient(fetchImpl, { maxRetries: 1, backoffFactor: 0, maxRetryAfter: 0 });
+
+    await expect(client.news.trending()).resolves.toEqual([]);
+    expect(fetchImpl.calls).toHaveLength(2);
+  });
 });

@@ -23,6 +23,12 @@ export interface AlphaAIOptions {
   maxRetries?: number;
   /** Base for exponential backoff, in seconds. Defaults to `0.5`. */
   backoffFactor?: number;
+  /**
+   * Cap, in seconds, on how long a `Retry-After` header may hold a retry.
+   * Defaults to `60`, the API's own ceiling for a per-minute burst block; a
+   * per-day cap can advertise up to 3600, which a client should not sleep through.
+   */
+  maxRetryAfter?: number;
   /** Custom `fetch` implementation (tests, proxies, edge runtimes). */
   fetch?: FetchLike;
   /** Value sent as the `User-Agent` header. Defaults to `alphai-sdk-js/<version>`. */
@@ -36,6 +42,7 @@ export interface ResolvedConfig {
   timeout: number;
   maxRetries: number;
   backoffFactor: number;
+  maxRetryAfter: number;
   fetch: FetchLike;
   userAgent: string;
 }
@@ -89,6 +96,7 @@ export function resolveConfig(options: AlphaAIOptions = {}): ResolvedConfig {
     timeout: options.timeout ?? 30_000,
     maxRetries: options.maxRetries ?? 2,
     backoffFactor: options.backoffFactor ?? 0.5,
+    maxRetryAfter: options.maxRetryAfter ?? 60,
     fetch: fetchImpl,
     userAgent: options.userAgent ?? `alphai-sdk-js/${VERSION}`,
   };
