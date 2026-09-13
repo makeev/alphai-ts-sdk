@@ -39,8 +39,8 @@ jobs:
 
       - name: Verify ESM + CJS resolve from dist/
         run: |
-          node -e "import('./dist/index.js').then(m => { if (typeof m.AlphAI !== 'function') { throw new Error('ESM export missing'); } console.log('ESM import ok'); })"
-          node -e "const m = require('./dist/index.cjs'); if (typeof m.AlphAI !== 'function') { throw new Error('CJS export missing'); } console.log('CJS require ok');"
+          node -e "import('./dist/index.js').then(m => { if (typeof m.AlphaAI !== 'function') { throw new Error('ESM export missing'); } console.log('ESM import ok'); })"
+          node -e "const m = require('./dist/index.cjs'); if (typeof m.AlphaAI !== 'function') { throw new Error('CJS export missing'); } console.log('CJS require ok');"
 
   integration:
     name: Live integration (optional)
