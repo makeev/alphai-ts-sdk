@@ -8,7 +8,7 @@ import { VERSION } from "./version";
  */
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
-/** Options for constructing an {@link AlphAI} client. */
+/** Options for constructing an {@link AlphaAI} client. */
 export interface AlphaAIOptions {
   /**
    * Your AlphAI API key (`ak_live_…`). If omitted, the client reads

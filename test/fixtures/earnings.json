@@ -53,22 +53,11 @@
           "revenue": "Company no longer provides quantitative guidance"
         },
         "vs_prior_guidance": [],
-        "capital_returns": [
-          "Returned over $32 billion to shareholders"
-        ],
-        "balance_sheet_cash_flow": [
-          "Operating cash flow of $29.6 billion"
-        ],
-        "drivers": [
-          "Record Services revenue",
-          "Strongwearables demand"
-        ],
-        "concerns": [
-          "iPhone units flat in Greater China"
-        ],
-        "what_to_watch": [
-          "iPhone replacement cycle into the September quarter"
-        ],
+        "capital_returns": ["Returned over $32 billion to shareholders"],
+        "balance_sheet_cash_flow": ["Operating cash flow of $29.6 billion"],
+        "drivers": ["Record Services revenue", "Strongwearables demand"],
+        "concerns": ["iPhone units flat in Greater China"],
+        "what_to_watch": ["iPhone replacement cycle into the September quarter"],
         "quotes": [
           {
             "speaker": "Tim Cook",
@@ -77,9 +66,7 @@
           }
         ],
         "analysis": "Fiscal Q3 landed in line with our expectations.",
-        "missing_items": [
-          "No explicit gross-margin guidance"
-        ],
+        "missing_items": ["No explicit gross-margin guidance"],
         "numbers_verified_from_document": true
       }
     }

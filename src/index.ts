@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-export { AlphAI } from "./client";
+export { AlphaAI } from "./client";
 export type { AlphaAIOptions, FetchLike, ResolvedConfig } from "./config";
 export { DEFAULT_BASE_URL } from "./config";
 
