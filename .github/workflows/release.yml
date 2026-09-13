@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
           cache: npm
 
@@ -37,7 +37,8 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # Trusted publishing (OIDC): npm exchanges the workflow's id-token for a
+      # short-lived credential, so there is no NPM_TOKEN secret to store or rotate.
+      # Configured on npmjs.com under the package's Trusted Publisher settings.
       - name: Publish
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
