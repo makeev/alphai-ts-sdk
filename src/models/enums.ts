@@ -1,5 +1,5 @@
 /**
- * String-union enums for the AlphaAI API.
+ * String-union enums for the AlphAI API.
  *
  * Every enum field on a response type is widened with `| (string & {})` so that
  * unknown future values returned by the API still type-check (forward

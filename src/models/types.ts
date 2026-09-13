@@ -1,7 +1,7 @@
 import type { Actionability, Confidence, NewsCategory, Sentiment } from "./enums";
 
 /**
- * AlphaAI response and request model types.
+ * AlphAI response and request model types.
  *
  * Response objects are returned **as-is from the wire** (snake_case) to match
  * the JSON exactly. Monetary fields stay as decimal `string`s (never coerce to
@@ -96,7 +96,7 @@ export interface OriginalArticle {
   updated_at: string;
 }
 
-/** The `enrichment` block of an article — AlphaAI's added analysis. */
+/** The `enrichment` block of an article — AlphAI's added analysis. */
 export interface EnrichedArticle {
   category: NewsCategory | (string & {});
   /** Validated tickers (the live column). */
@@ -197,7 +197,7 @@ export interface Symbol {
   tv_symbol?: string;
   /**
    * Company-confirmed date of the next earnings report, `YYYY-MM-DD`, or `null`
-   * when AlphaAI holds no confirmed date — never an estimate. Detail responses
+   * when AlphAI holds no confirmed date — never an estimate. Detail responses
    * only.
    */
   next_report_date?: string | null;
@@ -338,7 +338,7 @@ export interface Quote {
 }
 
 /**
- * AlphaAI's structured read of an earnings release, produced from the
+ * AlphAI's structured read of an earnings release, produced from the
  * company's own SEC filing — an 8-K item 2.02 for US filers, a 6-K earnings
  * release for foreign private issuers — with every figure checked against the
  * filing text. Consensus estimates and price targets are deliberately absent.

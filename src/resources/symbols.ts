@@ -61,7 +61,7 @@ export class SymbolsResource {
    * `GET /api/symbols/{ticker}/earnings/` — a ticker's published earnings
    * reads, newest first (capped at 20), plus its company-confirmed next report
    * date. An empty `reports` array is a normal answer, not an error; it means
-   * no read has been published yet. `next_report_date` is `null` when AlphaAI
+   * no read has been published yet. `next_report_date` is `null` when AlphAI
    * holds no confirmed date — never an estimate.
    */
   earnings(ticker: string, options: RequestOptions = {}): Promise<TickerEarningsHistory> {

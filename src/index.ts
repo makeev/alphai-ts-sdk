@@ -1,10 +1,10 @@
 /**
- * `alphai-sdk` — a typed TypeScript client for the AlphaAI REST API.
+ * `alphai-sdk` — a typed TypeScript client for the AlphAI REST API.
  *
  * @packageDocumentation
  */
 
-export { AlphaAI } from "./client";
+export { AlphAI } from "./client";
 export type { AlphaAIOptions, FetchLike, ResolvedConfig } from "./config";
 export { DEFAULT_BASE_URL } from "./config";
 

@@ -1,4 +1,4 @@
-# Plan — `alphai-sdk` (TypeScript / npm): client for the AlphaAI REST API
+# Plan — `alphai-sdk` (TypeScript / npm): client for the AlphAI REST API
 
 > This document is **self-contained**. Everything needed to build the package —
 > the full public API contract, the package design, and the publish plan — is
@@ -8,7 +8,7 @@
 
 ## Context
 
-AlphaAI ships a paid, key-authenticated public REST API at **`api.alphai.io`**
+AlphAI ships a paid, key-authenticated public REST API at **`api.alphai.io`**
 (OpenAPI **1.5.0**) serving relevance-scored, ticker-linked financial news plus
 SEC Form 4 insider data. The target audience is "financial news for AI agents
 and trading bots" — much of which lives in the JS/TS ecosystem (Node services,
@@ -29,7 +29,7 @@ Bun, and is publishable to npm.
 - **Runtime transport:** native `fetch` (Node ≥18, browsers, edge, Deno, Bun) —
   **zero runtime dependencies**. The client accepts a custom `fetch` for tests
   and advanced use.
-- **API style:** a single `AlphaAI` class with `client.news.*` / `client.symbols.*`
+- **API style:** a single `AlphAI` class with `client.news.*` / `client.symbols.*`
   resource namespaces; every method returns a `Promise`. Pagination via async
   iterators (`for await … of`).
 - **Types:** ship hand-written TypeScript types + `.d.ts`. Response objects are
@@ -286,8 +286,8 @@ alphai-ts-sdk/
 ├── README.md  LICENSE  CHANGELOG.md  PLAN.md  .gitignore  .npmignore
 ├── .github/workflows/ci.yml  release.yml
 ├── src/
-│   ├── index.ts            # public exports (AlphaAI, types, errors)
-│   ├── client.ts           # AlphaAI class wiring resources + http
+│   ├── index.ts            # public exports (AlphAI, types, errors)
+│   ├── client.ts           # AlphAI class wiring resources + http
 │   ├── config.ts           # resolveConfig (apiKey from opts or env), defaults
 │   ├── http.ts             # fetch wrapper: headers, query build, retry, rate-limit, error mapping
 │   ├── errors.ts           # error class hierarchy
@@ -438,7 +438,7 @@ If `apiKey` is missing and no env var (or no `process`), throw
 4. **HTTP core** (`http.ts`): fetch wrapper — header/query build (camel→snake,
    repeated arrays, drop undefined), timeout via AbortController, retry/backoff
    honoring `Retry-After`, rate-limit header capture, status→error mapping.
-5. **Client + resources** (`client.ts`, `resources/*`): `AlphaAI` class,
+5. **Client + resources** (`client.ts`, `resources/*`): `AlphAI` class,
    `news` + `symbols` resources, `lastRateLimit`.
 6. **Pagination** (`pagination.ts`): async-generator over `NewsPage` with
    `maxItems` / `maxPages`; wire `iterate()` / `iterateInsider()`.

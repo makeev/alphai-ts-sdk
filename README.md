@@ -1,6 +1,6 @@
 # alphai-sdk
 
-A typed, ergonomic TypeScript client for the [AlphaAI](https://alphai.io) REST API —
+A typed, ergonomic TypeScript client for the [AlphAI](https://alphai.io) REST API —
 relevance-scored, ticker-linked financial news plus SEC Form 4 insider data, built
 for AI agents and trading bots.
 
@@ -128,7 +128,7 @@ const sentiment = await client.symbols.sentimentSummary("AAPL");
 const insider = await client.symbols.insiderSummary("AAPL");
 console.log(insider.buy_value_usd); // e.g. "1284500.00" — a string, not a number
 
-// Earnings reads: AlphaAI's structured, filing-verified analysis per quarter.
+// Earnings reads: AlphAI's structured, filing-verified analysis per quarter.
 const earnings = await client.symbols.earnings("AAPL");
 console.log(earnings.next_report_date); // "2026-10-29" or null (never an estimate)
 for (const read of earnings.reports) {

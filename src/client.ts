@@ -5,7 +5,7 @@ import { NewsResource } from "./resources/news";
 import { SymbolsResource } from "./resources/symbols";
 
 /**
- * The AlphaAI API client.
+ * The AlphAI API client.
  *
  * ```ts
  * import { AlphaAI } from "alphai-sdk";
