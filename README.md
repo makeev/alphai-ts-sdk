@@ -326,6 +326,12 @@ ALPHAI_API_KEY=ak_live_… npx tsx examples/quickstart.ts
 A standalone, fuller set of runnable scripts lives in its own repo:
 [**alphai-sdk-ts-examples**](https://github.com/makeev/alphai-sdk-ts-examples).
 
+A worked recipe on the Free tier, with every response of the run logged:
+[**alphai-earnings-week**](https://github.com/makeev/alphai-earnings-week) builds one
+markdown card per week for a watchlist (confirmed report dates, the latest
+filing-verified read per name, the macro calendar) in 26 requests. It is written in
+Python; the same calls map onto `symbols.earnings()` here.
+
 ## License
 
 [MIT](./LICENSE)
