@@ -330,7 +330,8 @@ A worked recipe on the Free tier, with every response of the run logged:
 [**alphai-earnings-week**](https://github.com/makeev/alphai-earnings-week) builds one
 markdown card per week for a watchlist (confirmed report dates, the latest
 filing-verified read per name, the macro calendar) in 26 requests. It is written in
-Python; the same calls map onto `symbols.earnings()` here.
+Python; the same calls map onto `symbols.earnings()` here. The write-up walks through the
+run: [Earnings week from the filings, not the headlines](https://dev.to/makeev/earnings-week-from-the-filings-not-the-headlines-one-script-on-a-free-api-key-l5d).
 
 ## License
 
