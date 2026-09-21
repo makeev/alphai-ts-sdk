@@ -218,6 +218,69 @@ cursor left unused for longer than your window comes back `403`
 (`extra.reason === "archive_horizon"`). Poll on your plan's cadence and you will
 not see it; Pro has no window.
 
+## Multi-ticker Brief and Radar
+
+```ts
+import { AlphaAI, ConflictError } from "alphai-sdk";
+
+const client = new AlphaAI(); // reads ALPHAI_API_KEY
+const brief = await client.news.brief({
+  tickers: ["NVDA", "AMD", "BTC-USD"], hours: 24, limit: 10,
+});
+for (const event of [...brief.events, ...brief.filings]) {
+  console.log(event.matched_tickers, event.title);
+}
+console.log(brief.upcoming_earnings, brief.unknown_tickers);
+console.log("More coverage:", brief.events_truncated, brief.filings_truncated);
+
+const page = await client.radar.snapshot({ window: "24h", market: "us_equity", limit: 10 });
+console.log(page.snapshot_id, page.as_of, page.access, page.freshness);
+for (const reading of page.results) {
+  console.log(reading.ticker, reading.news_z, reading.sent.value);
+}
+
+// This reads the key owner's existing saved symbols.
+const saved = await client.radar.snapshot({ scope: "watchlist" });
+console.log(saved.watchlist_coverage);
+
+try {
+  for await (const reading of client.radar.iterate({ window: "4h", maxItems: 100 })) {
+    console.log(reading.ticker, reading.stories);
+  }
+} catch (error) {
+  if (!(error instanceof ConflictError)) throw error;
+  console.log("Snapshot expired or context changed. Start a new scan without a cursor.");
+}
+```
+
+**Brief** takes 1–100 explicit tickers on every tier; it does not read the saved
+account watchlist. `hours` is a publication window (1–168, default 24); `limit`
+caps each news/filings section separately (1–20, default 20). Check both
+truncation flags and `unknown_tickers`. Confirmed earnings dates remain ISO date
+strings; missing dates are not estimated. This ranked snapshot has no cursor.
+For complete incremental ingestion, use `news.list({ sort: "ingested" })` with a
+persisted cursor, not repeated Brief calls.
+
+**Radar** accepts `window` (`4h` / `24h`), `scope`, `market`, exact `ticker` or
+`tickers`, `search`, `sort`, `order`, `sentiment`, `minZ`, `limit`, `offset` and
+`cursor`. Request options use camelCase; response fields remain snake_case.
+`limit` is a page size (1–100, default 50), not a tier ticker cap. Ticker filters
+match exactly, with no alias expansion. Empty ticker arrays are rejected.
+
+The server delays the whole snapshot by 60 minutes on Free, 15 on Basic, and no
+added delay on Pro. Processing adds latency; inspect `as_of` and `freshness`.
+Nullable scores stay `null`. Radar describes news activity, not confirmed trading
+signals or point-in-time backtests. An empty saved watchlist returns no readings.
+
+For manual pagination, send `next_cursor` as `cursor` with unchanged filters and
+page size. Cursors pin snapshots retained for three hours. `ConflictError` (409)
+means start a new scan without a cursor; iteration never restarts silently or
+mixes snapshots. Unavailable snapshots raise `ServerError` (503) after bounded
+retries. Both methods and the iterator accept an `AbortSignal` as `signal`.
+
+Runnable examples: [watchlist brief](examples/watchlist-brief.ts) and
+[Radar](examples/radar.ts).
+
 ## Errors
 
 Every non-2xx response is mapped to a typed error. All extend `AlphaAIError`.

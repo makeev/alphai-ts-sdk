@@ -9,6 +9,7 @@
  * │   ├── AuthenticationError  (401)
  * │   ├── PermissionDeniedError(403)
  * │   ├── NotFoundError        (404)
+ * │   ├── ConflictError        (409)   restart a new Radar scan without a cursor
  * │   ├── RateLimitError       (429)   .retryAfter / .limit / .remaining / .reset
  * │   └── ServerError          (>=500)
  * └── MissingAPIKeyError               no apiKey and no ALPHAI_API_KEY
@@ -158,6 +159,14 @@ export class NotFoundError extends AlphaAIAPIError {
   }
 }
 
+/** 409 — the cursor context changed or its snapshot expired; start a new scan. */
+export class ConflictError extends AlphaAIAPIError {
+  constructor(args: APIErrorArgs) {
+    super(args);
+    this.name = "ConflictError";
+  }
+}
+
 /** 429 — rate limit exceeded. */
 export class RateLimitError extends AlphaAIAPIError {
   /** Seconds to wait before retrying, from the `Retry-After` header. */
@@ -195,6 +204,8 @@ export function createAPIError(args: APIErrorArgs): AlphaAIAPIError {
       return new PermissionDeniedError(args);
     case 404:
       return new NotFoundError(args);
+    case 409:
+      return new ConflictError(args);
     case 429:
       return new RateLimitError(args);
     default:

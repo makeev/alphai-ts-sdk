@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `news.brief`: grouped news, SEC filings and confirmed earnings dates for up to
+  100 explicit tickers, with unknown-symbol and truncation information.
+- `radar.snapshot` and `radar.iterate`: typed market or saved-watchlist activity
+  snapshots, all filters, evidence, freshness and cursor pagination. Iteration
+  preserves the snapshot and stops with an error if its context changes.
+- `ConflictError` for HTTP 409. Start a new Radar scan without a cursor when the
+  pinned snapshot expires; scans never silently restart and mix snapshots.
+
+### Documentation
+- Runnable watchlist overview and Radar examples, including the distinction
+  between a ranked Brief and complete delta ingestion.
+
 ## [0.5.2] - 2026-09-12
 
 ### Added

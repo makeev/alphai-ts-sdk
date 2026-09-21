@@ -2,6 +2,7 @@ import { type AlphaAIOptions, resolveConfig } from "./config";
 import { HttpClient } from "./http";
 import type { RateLimit } from "./models/types";
 import { NewsResource } from "./resources/news";
+import { RadarResource } from "./resources/radar";
 import { SymbolsResource } from "./resources/symbols";
 
 /**
@@ -17,6 +18,8 @@ import { SymbolsResource } from "./resources/symbols";
 export class AlphaAI {
   /** News endpoints. */
   readonly news: NewsResource;
+  /** Market and saved-watchlist Radar snapshots. */
+  readonly radar: RadarResource;
   /** Symbols endpoints. */
   readonly symbols: SymbolsResource;
 
@@ -24,6 +27,7 @@ export class AlphaAI {
 
   constructor(options: AlphaAIOptions = {}) {
     this.http = new HttpClient(resolveConfig(options));
+    this.radar = new RadarResource(this.http);
     this.news = new NewsResource(this.http);
     this.symbols = new SymbolsResource(this.http);
   }

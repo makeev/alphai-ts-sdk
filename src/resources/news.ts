@@ -1,4 +1,5 @@
 import type { HttpClient, QueryParams } from "../http";
+import type { NewsBrief, NewsBriefOptions } from "../models/brief";
 import type {
   CategoryFilter,
   DateBound,
@@ -11,6 +12,7 @@ import type {
   RichNewsArticle,
 } from "../models/types";
 import { paginate } from "../pagination";
+import { integerRange, tickerCSV } from "./snapshot-params";
 
 /**
  * Serialize a `fromDate` / `toDate` bound. Strings pass through untouched so
@@ -57,6 +59,24 @@ export class NewsResource {
 
   constructor(http: HttpClient) {
     this.http = http;
+  }
+
+  /**
+   * Grouped news, SEC filings and confirmed earnings dates for explicit tickers.
+   * A ranked publication snapshot, not a delta stream. Inspect unknown_tickers,
+   * events_truncated and filings_truncated. Each section has its own limit.
+   */
+  brief(options: NewsBriefOptions): Promise<NewsBrief> {
+    integerRange("hours", options.hours, 1, 168);
+    integerRange("limit", options.limit, 1, 20);
+    return this.http.request<NewsBrief>("/api/news/brief/", {
+      query: {
+        tickers: tickerCSV(options.tickers, 20, 100),
+        hours: options.hours,
+        limit: options.limit,
+      },
+      signal: options.signal,
+    });
   }
 
   /**

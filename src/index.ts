@@ -15,6 +15,7 @@ export {
   type APIErrorArgs,
   AuthenticationError,
   BadRequestError,
+  ConflictError,
   MissingAPIKeyError,
   NotFoundError,
   PermissionDeniedError,
@@ -73,3 +74,34 @@ export type {
 } from "./models/types";
 
 export { VERSION } from "./version";
+
+export type {
+  BriefSignal,
+  BriefEvent,
+  BriefEarningsDate,
+  NewsBrief,
+} from "./models/brief";
+
+export type {
+  RadarWindow,
+  RadarScope,
+  RadarTier,
+  RadarMarket,
+  RadarSort,
+  RadarOrder,
+  RadarSentimentFilter,
+  RadarCollection,
+  RadarSentiment,
+  RadarCalculationParams,
+  RadarAccess,
+  RadarEvidence,
+  RadarReading,
+  RadarSummary,
+  RadarFreshness,
+  RadarWatchlistCoverage,
+  RadarSnapshot,
+} from "./models/radar";
+
+export type { NewsBriefOptions } from "./models/brief";
+export type { RadarSnapshotOptions, RadarIterateOptions } from "./models/radar";
+export { RadarResource } from "./resources/radar";
