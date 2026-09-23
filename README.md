@@ -13,7 +13,7 @@ for AI agents and trading bots.
   rate-limit inspection.
 - **Dual module** — ships ESM + CJS with `.d.ts`.
 
-> Wraps the news and symbol endpoints 1:1 (11 of the 17 in the spec; calendar, macro and insider-trades are a plain `fetch` away). API-key management (create /
+> Covers news search, feeds, symbols, Brief and Radar. Calendar, macro and insider-trades are a plain `fetch` away. API-key management (create /
 > revoke) happens on the website at `/account/api-keys` — this SDK only *consumes* a key.
 
 ## Install
@@ -373,6 +373,42 @@ implementation via the `fetch` option.
 
 In the browser, the `User-Agent` header is a forbidden header name and is dropped by
 the runtime — that's expected and harmless.
+
+## Search by name or phrase
+
+```ts
+const toDate = new Date();
+const fromDate = new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+const options = { query: "Jane Street", fromDate, toDate, pageSize: 20 };
+const page = await client.news.search(options);
+console.log(page.query.mode, page.query.note, page.matched);
+for (const article of page.results) {
+  console.log(article.original.title, article.enrichment.tickers, article.search_match?.context);
+}
+if (page.next_cursor) {
+  const nextPage = await client.news.search({ ...options, cursor: page.next_cursor });
+  console.log(nextPage.results);
+}
+```
+
+`news.search()` returns a typed `NewsSearchPage` with `query` interpretation and
+per-article `search_match` details. Quoted phrases such as `query: '"going concern"'`,
+`-word` exclusions and `OR` pass through unchanged. Add `symbol`, `category`,
+`sourceType`, `item`, `minRelevance` or `collapseStories` to narrow results.
+`item: "5.02"` limits search to 8-Ks carrying that item. Date bounds accept ISO
+strings or `Date`, with the same semantics as the feed. `signal` supports cancellation.
+
+Inspect `query.mode` and `query.note`: `broadened` may match only some words;
+`no_match` and `no_terms` are empty answers within the searched coverage, not
+proof an event did not happen. `matched` counts visible candidates among the best
+200, not a global total; `count` is the current page size. Context can be null for
+matches in titles/entity names; scores compare only within a response. Continue
+with `next_cursor` and the same query, filters and window. Invalid cursors raise
+`BadRequestError`; downtime raises `ServerError` after the configured retries,
+never a successful empty page.
+
+Runnable example: [news search](examples/news-search.ts). Try the same queries
+in [AlphAI Search](https://alphai.io/search).
 
 ## Examples
 

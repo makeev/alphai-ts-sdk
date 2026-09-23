@@ -76,6 +76,13 @@ export type {
 export { VERSION } from "./version";
 
 export type {
+  SearchMatch,
+  NewsSearchQueryInfo,
+  NewsSearchPage,
+  NewsSearchOptions,
+} from "./models/search";
+
+export type {
   BriefSignal,
   BriefEvent,
   BriefEarningsDate,

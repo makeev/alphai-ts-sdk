@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-23
+
+### Added
+- `news.search({ query })`: text search with quoted phrases, exclusions,
+  ticker/category/source/8-K-item filters, date windows and AbortSignal support.
+- Exported `NewsSearchOptions`, `NewsSearchPage`, `NewsSearchQueryInfo` and
+  `SearchMatch` types for interpretation, match context and cursor pagination.
+- Runnable search example and guidance for partial matches, empty results and
+  continuing a search with the same query and filters.
+
 ## [0.6.0] - 2026-09-21
 
 ### Added

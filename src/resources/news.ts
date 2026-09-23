@@ -1,5 +1,6 @@
 import type { HttpClient, QueryParams } from "../http";
 import type { NewsBrief, NewsBriefOptions } from "../models/brief";
+import type { NewsSearchOptions, NewsSearchPage } from "../models/search";
 import type {
   CategoryFilter,
   DateBound,
@@ -59,6 +60,32 @@ export class NewsResource {
 
   constructor(http: HttpClient) {
     this.http = http;
+  }
+
+  /**
+   * Search article text without resolving the query to a ticker. Inspect query.mode
+   * and query.note: broadened results can match only some words, and no_match is
+   * limited to the searched window and coverage. matched is bounded to the best 200.
+   * Pass next_cursor with the same query, filters and window for the next page.
+   * Invalid cursors raise BadRequestError; unavailable search raises ServerError.
+   */
+  search(options: NewsSearchOptions): Promise<NewsSearchPage> {
+    return this.http.request<NewsSearchPage>("/api/news/search/", {
+      query: {
+        q: options.query,
+        symbol: options.symbol,
+        category: normalizeCategories(options.category),
+        source_type: normalizeCategories(options.sourceType),
+        item: options.item,
+        min_relevance: options.minRelevance,
+        collapse: options.collapseStories ? "story" : undefined,
+        cursor: options.cursor,
+        page_size: options.pageSize,
+        from_date: dateParam(options.fromDate),
+        to_date: dateParam(options.toDate),
+      },
+      signal: options.signal,
+    });
   }
 
   /**

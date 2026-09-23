@@ -134,6 +134,8 @@ export interface InsiderEvent {
 }
 
 export interface RichNewsArticle {
+  /** Search endpoint only. */
+  search_match?: import("./search").SearchMatch | null;
   original: OriginalArticle;
   enrichment: EnrichedArticle;
   /** Structured Form 4 event block — insider-feed items only; absent/null elsewhere. */
