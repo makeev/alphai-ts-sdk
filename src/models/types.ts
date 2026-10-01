@@ -308,10 +308,24 @@ export interface KeyMetric {
 /** One reporting segment and what drove it. */
 export interface Segment {
   name: string;
+  /** Figure as reported, e.g. `"$18,002"`. */
   revenue: string;
   yoy_change?: string | null;
   qoq_change?: string | null;
   driver?: string;
+  /**
+   * `revenue` as a number at the scale it was printed; `null` when the field
+   * carries no figure (API 1.46.0, 2026-10-01).
+   */
+  numeric?: number | null;
+  /** ISO-style currency code, `"pct"`, or `null` when the cell prints no currency. */
+  unit?: string | null;
+  /**
+   * The multiplier `numeric` is expressed in. A segment table usually names its
+   * unit in the header, so this is what makes `"$18,002"` computable. `null`
+   * when nothing in the filing named the unit.
+   */
+  scale?: "ones" | "thousands" | "millions" | "billions" | "trillions" | null;
 }
 
 /** Company guidance for the coming period (`null` when not disclosed). */
@@ -368,6 +382,12 @@ export interface EarningsReport {
   /** What the filing did NOT state, named rather than guessed. */
   missing_items?: string[];
   numbers_verified_from_document?: boolean;
+  /**
+   * The unit the filing's own table headers name, or `null` (API 1.46.0). The
+   * notes and `analysis` quote table figures as printed, so under `"millions"`
+   * a bare `$36,197` there is $36,197 million; per-share figures are as printed.
+   */
+  table_scale?: "thousands" | "millions" | "billions" | null;
 }
 
 /**

@@ -143,4 +143,19 @@ describe("symbols endpoints", () => {
     expect(metrics[0].scale).toBe("millions");
     expect(metrics[metrics.length - 1].scale).toBeUndefined();
   });
+
+  it("types the segment companions and table_scale", async () => {
+    const client = makeClient(mockFetch(() => jsonResponse(earnings)));
+
+    const { analysis } = (await client.symbols.earnings("AAPL")).reports[0];
+    const segments = analysis.segments ?? [];
+    const bare = segments[segments.length - 1];
+
+    expect(analysis.table_scale).toBe("millions");
+    expect(bare.revenue).toBe("$586");
+    expect(bare.numeric).toBe(586);
+    expect(bare.unit).toBe("USD");
+    expect(bare.scale).toBe("millions");
+    expect(segments[0].scale).toBeUndefined();
+  });
 });

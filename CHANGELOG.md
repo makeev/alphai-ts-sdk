@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-01
+
+### Added
+- `Segment.numeric` / `.unit` / `.scale`: the companions the API attaches to
+  every earnings segment from spec 1.46.0, next to the unchanged printed
+  `revenue`. `scale` is `null` when nothing in the filing named the unit.
+- `EarningsReport.table_scale`: the unit the filing's table headers name, which
+  is the unit of any table figure the notes and `analysis` quote without one.
+
 ## [0.7.0] - 2026-09-23
 
 ### Added
