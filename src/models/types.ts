@@ -92,6 +92,12 @@ export interface OriginalArticle {
   topics: Topic[];
   /** Loosely typed on purpose — shape varies by source. */
   tickers_sentiment: Record<string, unknown>[];
+  /**
+   * SEC Form 4 rows only: the holding pool the trade touched; `null` on other
+   * news. One filing can surface a `direct` and an `indirect` leg as two rows
+   * with the same URL: separate events, so sum them rather than dedupe.
+   */
+  ownership_form?: "direct" | "indirect" | (string & {}) | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,7 +113,6 @@ export interface EnrichedArticle {
   news_context_enhancement?: NewsContextEnhancement;
 }
 
-/** A fully enriched news article. */
 /**
  * Structured SEC Form 4 event block, present on insider-feed items only
  * (`GET /api/news/insider/`). Aggregate of the row's whole transaction group:
@@ -131,6 +136,47 @@ export interface InsiderEvent {
   is_ten_percent_owner: boolean;
   /** ISO date of the last fill in the group, e.g. "2026-07-09". */
   transaction_date: string;
+  /** When EDGAR accepted the filing (ISO 8601, UTC); compare with `transaction_date`. */
+  filed_at?: string;
+  /**
+   * The filing missed the SEC's two-business-day deadline (Rule 16a-3(g)),
+   * counted on Eastern dates with one weekday of slack.
+   */
+  late_filing?: boolean;
+}
+
+/**
+ * Where a row was ingested from — the axis the `sourceType` filter selects on.
+ * `gdelt` is press coverage (every publisher channel); `sec_form4` an insider
+ * transaction; `sec_form8k` an 8-K current report (carries the `filing` block);
+ * `sec_form6k` a foreign private issuer's 6-K earnings release.
+ */
+export type NewsSourceType = "gdelt" | "sec_form4" | "sec_form8k" | "sec_form6k";
+
+/**
+ * Structured SEC 8-K filing block (`filing`), on rows whose source is an 8-K:
+ * what the filing itself says, next to the AI read of it.
+ */
+export interface EightKFiling {
+  /**
+   * Every item code the filing carries, in the filing's order
+   * (`["5.02", "9.01"]`); the `item` filter matches any of them. Empty for a
+   * filing SEC served no document for.
+   */
+  items: string[];
+  /** The item that drove the row's `category`; `null` when the filing lists none. */
+  primary_item?: string | null;
+  /** SEC accession number of the filing — the id to cite. */
+  accession_number: string;
+  /** When EDGAR accepted the filing (ISO 8601, UTC). */
+  filed_at: string;
+  /**
+   * The filing's own "date of report" (`YYYY-MM-DD`), which can precede
+   * `filed_at` by up to four business days; `null` when the header has none.
+   */
+  event_date?: string | null;
+  /** The press-release exhibit (EX-99.x) the summary was built from; `null` when none. */
+  exhibit_url?: string | null;
 }
 
 export interface RichNewsArticle {
@@ -138,8 +184,22 @@ export interface RichNewsArticle {
   search_match?: import("./search").SearchMatch | null;
   original: OriginalArticle;
   enrichment: EnrichedArticle;
-  /** Structured Form 4 event block — insider-feed items only; absent/null elsewhere. */
+  /**
+   * Structured Form 4 event block — on Form 4 rows of `news.insider` and
+   * `news.get`; absent/null elsewhere.
+   */
   insider?: InsiderEvent | null;
+  /**
+   * Structured 8-K filing block — on 8-K rows of `news.list` and `news.get`;
+   * `null` on press, Form 4 and 6-K rows and on the other endpoints.
+   */
+  filing?: EightKFiling | null;
+  /**
+   * AlphAI's structured earnings read — `news.get` only, and only on a major
+   * ticker's earnings filing whose figures cleared the cross-check against the
+   * filing text. `null` on every other article: check before use.
+   */
+  earnings?: EarningsReport | null;
   /** Present only when `collapseStories` (collapse=story) is set. */
   story_id?: string | null;
   /** Present only when `collapseStories` is set. */
@@ -153,6 +213,12 @@ export interface NewsPage {
   results: RichNewsArticle[];
   /** Opaque cursor for the next page, or `null` at the end of the feed. */
   next_cursor: string | null;
+  /**
+   * Set only when `symbol` named a stock/ETF whose bare string also names an
+   * active cryptocurrency (`BTC` is a Grayscale ETF): one sentence naming the
+   * coin ticker to request (`BTC-USD`). The page still serves the equity.
+   */
+  symbol_note?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -517,6 +583,18 @@ export interface NewsListOptions extends RequestOptions {
   fromDate?: DateBound;
   /** Inclusive upper bound on `time_published`; see {@link DateBound}. Sends `to_date`. */
   toDate?: DateBound;
+  /**
+   * Keep only rows from these sources, OR-matched (single, array or CSV):
+   * `gdelt` (press), `sec_form4`, `sec_form8k`, `sec_form6k`. Sends
+   * `source_type`. 8-K rows carry the structured `filing` block.
+   */
+  sourceType?: NewsSourceType | (string & {}) | Array<NewsSourceType | (string & {})>;
+  /**
+   * 8-K item code, e.g. `"5.02"`: only 8-K filings carrying that item anywhere
+   * in the filing. Implies `sourceType: "sec_form8k"`; next to any other
+   * source type the API answers 400.
+   */
+  item?: string;
 }
 
 /** Options for {@link NewsResource.iterate}. */
@@ -557,12 +635,122 @@ export interface InsiderListOptions extends RequestOptions {
   fromDate?: DateBound;
   /** Inclusive upper bound, same clock as `fromDate`. Sends `to_date`. */
   toDate?: DateBound;
+  /**
+   * Filter on the event's Rule 10b5-1 status, the field the `insider` block
+   * reports: `false` keeps discretionary trades only, `true` plan trades only;
+   * omit for both. Sends `is_10b5_1`.
+   */
+  is10b5_1?: boolean;
 }
 
 /** Options for {@link NewsResource.iterateInsider}. */
 export interface InsiderIterateOptions extends InsiderListOptions {
   maxItems?: number;
   maxPages?: number;
+}
+
+/**
+ * Options for {@link NewsResource.insiderCsv}: the insider feed's filters.
+ * `pageSize` has no effect on an export, so it is not offered.
+ */
+export type InsiderCsvOptions = Omit<InsiderListOptions, "pageSize">;
+
+/**
+ * An insider-feed CSV export (`news.insiderCsv`): the file and how it ended.
+ * Built from the response's `X-Alphai-*` headers.
+ */
+export interface InsiderCsvExport {
+  /** The whole file, header line first, columns in the order the API documents. */
+  text: string;
+  /** Data rows in the file (`X-Alphai-Rows`); `null` if the header was missing. */
+  rows: number | null;
+  /** Your plan's rows-per-file cap (`X-Alphai-Row-Cap`). */
+  row_cap: number | null;
+  /**
+   * Why the file stopped: `"row_cap"` (more rows exist; continue with
+   * `next_cursor`) or `"archive_horizon"` (the walk reached your plan's
+   * archive depth). `null` when the file holds everything the filters select.
+   */
+  truncated: "row_cap" | "archive_horizon" | (string & {}) | null;
+  /**
+   * The same cursor a JSON page would return at this position; pass it as
+   * `cursor` (with the same `sort`) to continue in either format.
+   */
+  next_cursor: string | null;
+  /** The attachment name from `Content-Disposition`, e.g. `alphai-insider-2026-10-09.csv`. */
+  filename: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Coverage passport
+// ---------------------------------------------------------------------------
+
+/** A data source in the coverage passport. */
+export type CoverageSourceName =
+  | "publisher_news"
+  | "sec_form4"
+  | "sec_form8k"
+  | "sec_form6k"
+  | "earnings_reads"
+  | "earnings_schedule"
+  | "economic_calendar";
+
+/** How far back a key on each plan can page the news feeds into a source's rows, in days (`0` = unlimited). */
+export interface CoverageArchiveDays {
+  free: number;
+  basic: number;
+  pro: number;
+}
+
+/** One discovery channel of publisher news. */
+export interface CoverageChannel {
+  channel: "gkg" | "rss" | (string & {});
+  cadence: string;
+  /** ISO 8601, or `null`. */
+  last_ingested_at?: string | null;
+  stale_after_seconds: number;
+  stale: boolean;
+}
+
+/**
+ * The passport of one data source. `first_row_at` is the earliest row held,
+ * NOT the start of dense coverage — `history_note` says where history is thin.
+ */
+export interface CoverageSource {
+  source: CoverageSourceName | (string & {});
+  /** Earliest row by the source's own clock (ISO 8601), or `null` when empty. */
+  first_row_at?: string | null;
+  /** Latest row by the same clock; reaches into the future for schedules. */
+  last_row_at?: string | null;
+  /** When the newest row landed (ISO 8601), or `null`. */
+  last_ingested_at?: string | null;
+  /** Rows in the source's own unit (articles, distinct filings, reads, dates, occurrences). */
+  rows_total: number;
+  cadence: string;
+  history_note: string;
+  limits: string[];
+  /** `null` where the archive gate does not apply. */
+  archive_days?: CoverageArchiveDays | null;
+  /** An honest flag, not an alert: the newest ingest is older than `stale_after_seconds`. */
+  stale: boolean;
+  /** `null` for the economic calendar (stale there = no future occurrence held). */
+  stale_after_seconds?: number | null;
+  /** `publisher_news` only. */
+  channels?: CoverageChannel[] | null;
+}
+
+/**
+ * Endpoint `/api/coverage/` — what each data source holds, from when, with
+ * which caveats. Computed once a day: `as_of` is when the counts were taken,
+ * `generated_at` when the payload was assembled.
+ */
+export interface Coverage {
+  generated_at: string;
+  as_of: string;
+  /** Always `true`: research information, not investment advice. */
+  research_only: boolean;
+  /** Fixed order: publisher_news, sec_form4, sec_form8k, sec_form6k, earnings_reads, earnings_schedule, economic_calendar. */
+  sources: CoverageSource[];
 }
 
 /** Options for {@link SymbolsResource.list}. */

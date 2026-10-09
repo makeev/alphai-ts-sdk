@@ -8,6 +8,14 @@ import { VERSION } from "./version";
  */
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
+/**
+ * Where the client reports the wait before each retry. `console` satisfies
+ * it, and so do most logging libraries (pino, winston, a custom wrapper).
+ */
+export interface AlphaAILogger {
+  warn(message: string): void;
+}
+
 /** Options for constructing an {@link AlphaAI} client. */
 export interface AlphaAIOptions {
   /**
@@ -33,6 +41,13 @@ export interface AlphaAIOptions {
   fetch?: FetchLike;
   /** Value sent as the `User-Agent` header. Defaults to `alphai-sdk-js/<version>`. */
   userAgent?: string;
+  /**
+   * Receives one line before every retry wait (429, 5xx, network error) with
+   * the status, the seconds it will sleep and, on a 429, `Retry-After` and the
+   * daily budget left, so a client waiting out a rate limit never looks hung.
+   * Defaults to `console`; pass `null` to silence it.
+   */
+  logger?: AlphaAILogger | null;
 }
 
 /** Fully-resolved configuration with all defaults applied. */
@@ -45,6 +60,7 @@ export interface ResolvedConfig {
   maxRetryAfter: number;
   fetch: FetchLike;
   userAgent: string;
+  logger: AlphaAILogger | null;
 }
 
 /** Default API base URL. */
@@ -67,6 +83,12 @@ function resolveFetch(custom?: FetchLike): FetchLike | undefined {
     return globalThis.fetch.bind(globalThis) as FetchLike;
   }
   return undefined;
+}
+
+/** The runtime's `console`, when it has one (every supported runtime does). */
+function defaultLogger(): AlphaAILogger | null {
+  const c = (globalThis as { console?: AlphaAILogger }).console;
+  return c && typeof c.warn === "function" ? c : null;
 }
 
 function stripTrailingSlash(url: string): string {
@@ -99,5 +121,6 @@ export function resolveConfig(options: AlphaAIOptions = {}): ResolvedConfig {
     maxRetryAfter: options.maxRetryAfter ?? 60,
     fetch: fetchImpl,
     userAgent: options.userAgent ?? `alphai-sdk-js/${VERSION}`,
+    logger: options.logger === undefined ? defaultLogger() : options.logger,
   };
 }

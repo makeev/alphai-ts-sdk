@@ -1,9 +1,12 @@
+import { AlphaAIError } from "../errors";
 import type { HttpClient, QueryParams } from "../http";
 import type { NewsBrief, NewsBriefOptions } from "../models/brief";
 import type { NewsSearchOptions, NewsSearchPage } from "../models/search";
 import type {
   CategoryFilter,
   DateBound,
+  InsiderCsvExport,
+  InsiderCsvOptions,
   InsiderIterateOptions,
   InsiderListOptions,
   NewsIterateOptions,
@@ -51,6 +54,56 @@ function newsQuery(options: NewsListOptions): QueryParams {
     sort: options.sort,
     from_date: dateParam(options.fromDate),
     to_date: dateParam(options.toDate),
+    source_type: normalizeCategories(options.sourceType),
+    item: options.item,
+  };
+}
+
+function insiderQuery(options: InsiderListOptions): QueryParams {
+  return {
+    cursor: options.cursor,
+    symbol: options.symbol,
+    min_relevance: options.minRelevance,
+    is_10b5_1: options.is10b5_1,
+    page_size: options.pageSize,
+    sort: options.sort,
+    from_date: dateParam(options.fromDate),
+    to_date: dateParam(options.toDate),
+  };
+}
+
+/**
+ * `Accept` for `format=csv`. The API answers `format=csv` together with an
+ * `Accept: application/json` (the SDK's default) with 406; error bodies stay
+ * JSON either way.
+ */
+const CSV_ACCEPT = "text/csv, application/json;q=0.9";
+
+function headerInt(headers: Headers, name: string): number | null {
+  const raw = headers.get(name);
+  if (raw === null || raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isInteger(n) ? n : null;
+}
+
+async function parseInsiderCsv(response: Response): Promise<InsiderCsvExport> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("text/csv")) {
+    void response.body?.cancel().catch(() => {});
+    throw new AlphaAIError(
+      `Expected a text/csv body from the insider export, got ${JSON.stringify(contentType || "none")}`,
+    );
+  }
+  const truncated = response.headers.get("x-alphai-truncated");
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? null;
+  return {
+    text: await response.text(),
+    rows: headerInt(response.headers, "x-alphai-rows"),
+    row_cap: headerInt(response.headers, "x-alphai-row-cap"),
+    truncated: truncated === null || truncated === "" || truncated === "false" ? null : truncated,
+    next_cursor: response.headers.get("x-alphai-next-cursor") || null,
+    filename,
   };
 }
 
@@ -114,6 +167,10 @@ export class NewsResource {
    * of the feed: rows come back in arrival order, `next_cursor` is always set,
    * and an empty `results` means you are caught up. Cursors are mode-specific,
    * so send the same `sort` on every call of a run.
+   *
+   * `sourceType` selects press (`gdelt`) or SEC filings (`sec_form4`,
+   * `sec_form8k`, `sec_form6k`); `item` (e.g. `"5.02"`) keeps 8-Ks carrying
+   * that item and implies `sec_form8k`. 8-K rows carry the `filing` block.
    */
   list(options: NewsListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/", {
@@ -159,17 +216,29 @@ export class NewsResource {
    */
   insider(options: InsiderListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/insider/", {
-      query: {
-        cursor: options.cursor,
-        symbol: options.symbol,
-        min_relevance: options.minRelevance,
-        page_size: options.pageSize,
-        sort: options.sort,
-        from_date: dateParam(options.fromDate),
-        to_date: dateParam(options.toDate),
-      },
+      query: insiderQuery(options),
       signal: options.signal,
     });
+  }
+
+  /**
+   * `GET /api/news/insider/?format=csv` — the insider feed as one CSV file,
+   * same filters. One row per insider event, walked on the server up to your
+   * plan's row cap (Free 500, Basic 2 000, Pro 10 000) inside its archive
+   * horizon; the file counts as one request and never fails part-way.
+   *
+   * Check `truncated` (`"row_cap"` / `"archive_horizon"`, `null` when the
+   * file holds everything) and continue a capped file with `next_cursor`,
+   * which {@link NewsResource.insider} accepts too (same `sort`). Validation
+   * errors are the JSON feed's 400s, raised before any row.
+   */
+  async insiderCsv(options: InsiderCsvOptions = {}): Promise<InsiderCsvExport> {
+    const response = await this.http.send("/api/news/insider/", {
+      query: { ...insiderQuery(options), page_size: undefined, format: "csv" },
+      signal: options.signal,
+      accept: CSV_ACCEPT,
+    });
+    return parseInsiderCsv(response);
   }
 
   /** Iterate the insider feed across pages, following `next_cursor` automatically. */

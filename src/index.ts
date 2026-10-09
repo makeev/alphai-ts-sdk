@@ -5,7 +5,7 @@
  */
 
 export { AlphaAI } from "./client";
-export type { AlphaAIOptions, FetchLike, ResolvedConfig } from "./config";
+export type { AlphaAILogger, AlphaAIOptions, FetchLike, ResolvedConfig } from "./config";
 export { DEFAULT_BASE_URL } from "./config";
 
 export {
@@ -35,16 +35,25 @@ export type {
   AITradingInsights,
   AlternativePerspectives,
   CategoryFilter,
+  Coverage,
+  CoverageArchiveDays,
+  CoverageChannel,
+  CoverageSource,
+  CoverageSourceName,
   DailySentimentBucket,
   EarningsRead,
   EarningsReport,
   EarningsSourceType,
   EarningsVerdict,
+  EightKFiling,
   EnrichedArticle,
   Guidance,
   ImpactAnalysis,
   IndirectMarketEffects,
   DateBound,
+  InsiderCsvExport,
+  InsiderCsvOptions,
+  InsiderEvent,
   InsiderIterateOptions,
   InsiderListOptions,
   KeyEntity,
@@ -55,6 +64,7 @@ export type {
   NewsListOptions,
   NewsPage,
   NewsSort,
+  NewsSourceType,
   NewsTradingValue,
   OriginalArticle,
   Quote,

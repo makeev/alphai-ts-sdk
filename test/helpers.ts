@@ -41,13 +41,17 @@ export function jsonResponse(
   });
 }
 
-/** Build a client wired to a mock fetch. Retries are off by default for determinism. */
+/**
+ * Build a client wired to a mock fetch. Retries are off by default for
+ * determinism, and retry-wait logging is off unless a test passes a `logger`.
+ */
 export function makeClient(fetchImpl: FetchLike, options: AlphaAIOptions = {}): AlphaAI {
   return new AlphaAI({
     apiKey: "ak_live_test",
     fetch: fetchImpl,
     maxRetries: 0,
     backoffFactor: 0,
+    logger: null,
     ...options,
   });
 }

@@ -9,12 +9,14 @@ export type QueryParams = Record<string, QueryValue>;
 export interface RequestConfig {
   query?: QueryParams;
   signal?: AbortSignal;
+  /** Overrides the JSON `Accept` header (the CSV export asks for `text/csv`). */
+  accept?: string;
 }
 
 /**
  * Thin `fetch` wrapper: builds URLs and headers, captures rate-limit headers,
  * retries idempotent GETs on 429/5xx/network errors with exponential backoff,
- * and maps non-2xx responses to typed errors.
+ * logs every wait before a retry, and maps non-2xx responses to typed errors.
  */
 export class HttpClient {
   /** Rate-limit snapshot from the most recent response carrying the headers. */
@@ -26,11 +28,26 @@ export class HttpClient {
     this.cfg = cfg;
   }
 
+  /** GET `path` and resolve to the parsed JSON body (`null` on a 204). */
   async request<T>(path: string, config: RequestConfig = {}): Promise<T> {
+    const response = await this.send(path, config);
+    if (response.status === 204) {
+      // Documented "nothing here yet" (e.g. /earnings/latest/ before a read exists).
+      drain(response);
+      return null as T;
+    }
+    return (await parseBody(response)) as T;
+  }
+
+  /**
+   * GET `path` with retries and resolve to the first non-error `Response`,
+   * body unread. A final error status rejects with its typed error.
+   */
+  async send(path: string, config: RequestConfig = {}): Promise<Response> {
     const url = buildURL(this.cfg.baseURL, path, config.query);
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.cfg.apiKey}`,
-      Accept: "application/json",
+      Accept: config.accept ?? "application/json",
       "User-Agent": this.cfg.userAgent,
     };
     const { fetch: fetchImpl, maxRetries, timeout, backoffFactor, maxRetryAfter } = this.cfg;
@@ -59,14 +76,16 @@ export class HttpClient {
         if (userSignal?.aborted) {
           throw new AlphaAIConnectionError("Request aborted", { cause: userSignal.reason });
         }
-        if (attempt < maxRetries) {
-          await sleep(backoffDelay(attempt, backoffFactor));
-          attempt++;
-          continue;
-        }
         const reason = state.timedOut
           ? `Request timed out after ${timeout}ms`
           : "Network request failed";
+        if (attempt < maxRetries) {
+          const delay = backoffDelay(attempt, backoffFactor);
+          this.logRetryWait(path, delay, attempt + 1, `connection error (${reason})`, []);
+          await sleep(delay);
+          attempt++;
+          continue;
+        }
         throw new AlphaAIConnectionError(reason, { cause: err });
       }
       clearTimeout(timer);
@@ -74,22 +93,34 @@ export class HttpClient {
       const rateLimit = parseRateLimit(response.headers);
       if (rateLimit) this.lastRateLimit = rateLimit;
 
-      if (response.ok) {
-        if (response.status === 204) {
-          // Documented "nothing here yet" (e.g. /earnings/latest/ before a read exists).
-          drain(response);
-          return null as T;
-        }
-        return (await parseBody(response)) as T;
-      }
+      if (response.ok) return response;
 
       const retryable = response.status === 429 || response.status >= 500;
       if (retryable && attempt < maxRetries) {
+        // Honor Retry-After on any retryable status (a 503 from a cold cache
+        // sends one too), capped by maxRetryAfter; otherwise jittered backoff.
         const retryAfter = parseRetryAfter(response.headers);
         const delay =
-          response.status === 429 && retryAfter !== null
+          retryAfter !== null
             ? Math.min(retryAfter, maxRetryAfter) * 1000
             : backoffDelay(attempt, backoffFactor);
+        const notes: string[] = [];
+        const rawRetryAfter = response.headers.get("retry-after");
+        if (rawRetryAfter !== null) {
+          notes.push(`Retry-After: ${rawRetryAfter}${/^\d+$/.test(rawRetryAfter) ? "s" : ""}`);
+        }
+        if (response.status === 429 && rateLimit?.remaining != null) {
+          notes.push(
+            rateLimit.limit != null
+              ? `daily budget ${rateLimit.remaining}/${rateLimit.limit} left`
+              : `daily budget ${rateLimit.remaining} left`,
+          );
+        }
+        const cause =
+          response.status === 429
+            ? "HTTP 429 (rate limited)"
+            : `HTTP ${response.status} (server error)`;
+        this.logRetryWait(path, delay, attempt + 1, cause, notes);
         drain(response);
         await sleep(delay);
         attempt++;
@@ -97,6 +128,30 @@ export class HttpClient {
       }
 
       throw await buildError(response, rateLimit);
+    }
+  }
+
+  /**
+   * Report the wait before a retry, so a client sleeping on a 429 never looks
+   * hung. `X-RateLimit-*` report the per-day layer only: a 429 with daily
+   * budget left is the per-minute burst cap, which no header exposes.
+   */
+  private logRetryWait(
+    path: string,
+    delayMs: number,
+    retry: number,
+    cause: string,
+    notes: string[],
+  ): void {
+    const logger = this.cfg.logger;
+    if (!logger) return;
+    const suffix = notes.length > 0 ? ` (${notes.join("; ")})` : "";
+    try {
+      logger.warn(
+        `alphai: ${cause} on GET ${path}; waiting ${(delayMs / 1000).toFixed(1)}s before retry ${retry} of ${this.cfg.maxRetries}${suffix}`,
+      );
+    } catch {
+      // A failing logger must never fail the request it reports on.
     }
   }
 }

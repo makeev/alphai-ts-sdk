@@ -1,6 +1,6 @@
 import { type AlphaAIOptions, resolveConfig } from "./config";
 import { HttpClient } from "./http";
-import type { RateLimit } from "./models/types";
+import type { Coverage, RateLimit, RequestOptions } from "./models/types";
 import { NewsResource } from "./resources/news";
 import { RadarResource } from "./resources/radar";
 import { SymbolsResource } from "./resources/symbols";
@@ -30,6 +30,18 @@ export class AlphaAI {
     this.radar = new RadarResource(this.http);
     this.news = new NewsResource(this.http);
     this.symbols = new SymbolsResource(this.http);
+  }
+
+  /**
+   * `GET /api/coverage/` — the coverage passport: what each data source holds,
+   * from when, with which caveats (first/last row, last ingest, row count,
+   * cadence, `history_note`, `limits`, per-plan archive depth). Read it before a
+   * backtest: `first_row_at` is the earliest row held, not the start of dense
+   * coverage. Computed once a day; a cold cache answers 503 with `Retry-After`,
+   * which the retry loop honors.
+   */
+  coverage(options: RequestOptions = {}): Promise<Coverage> {
+    return this.http.request<Coverage>("/api/coverage/", { signal: options.signal });
   }
 
   /**

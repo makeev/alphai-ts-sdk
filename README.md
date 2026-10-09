@@ -13,8 +13,10 @@ for AI agents and trading bots.
   rate-limit inspection.
 - **Dual module** — ships ESM + CJS with `.d.ts`.
 
-> Covers news search, feeds, symbols, Brief and Radar. Calendar, macro and insider-trades are a plain `fetch` away. API-key management (create /
-> revoke) happens on the website at `/account/api-keys` — this SDK only *consumes* a key.
+> Covers news search, feeds (press and SEC filings), symbols, Brief, Radar, the
+> coverage passport and the insider CSV export. Calendar, macro and insider-trades
+> are a plain `fetch` away. API-key management (create / revoke) happens on the
+> website at `/account/api-keys` — this SDK only *consumes* a key.
 
 ## Install
 
@@ -93,8 +95,8 @@ const july = await client.news.list({
 // Trending: up to 10 ranked stories from the last 48h (not paginated).
 const trending = await client.news.trending();
 
-// Insider feed (SEC Form 4 filings).
-const insider = await client.news.insider({ symbol: "NVDA" });
+// Insider feed (SEC Form 4 filings). is10b5_1: false keeps discretionary trades only.
+const insider = await client.news.insider({ symbol: "NVDA", is10b5_1: false });
 for await (const article of client.news.iterateInsider({ symbol: "NVDA" })) {
   // …
 }
@@ -146,7 +148,74 @@ for (const read of earnings.reports) {
 const latest = await client.symbols.earningsLatest("AAPL");
 if (latest) {
   const article = await client.news.get(latest.uid);
+  const read = article.earnings; // may be null, even on an earnings article
+  if (read) console.log(read.verdict, read.headline);
 }
+```
+
+### SEC filings: `sourceType`, `item` and the `filing` block
+
+`sourceType` picks where rows come from: `gdelt` (press coverage), `sec_form4`,
+`sec_form8k` or `sec_form6k`, OR-matched (single value, array or CSV string).
+`item` keeps 8-K filings that carry an item code anywhere in the filing (`"5.02"`
+executive changes, `"1.01"` material agreements, `"8.01"` other events) and
+implies `sec_form8k`; next to any other source type the API answers `400`. Every
+8-K row carries a structured `filing` block:
+
+```ts
+const page = await client.news.list({ item: "5.02", minRelevance: 6 });
+for (const article of page.results) {
+  const filing = article.filing; // null on press, Form 4 and 6-K rows
+  if (!filing) continue;
+  console.log(article.enrichment.tickers, filing.items, filing.primary_item);
+  console.log(filing.accession_number, filing.filed_at, filing.event_date, filing.exhibit_url);
+}
+```
+
+`items` lists every item code in the filing's order and is empty for a filing SEC
+served no document for; `primary_item` is the one that set the row's category.
+With `collapseStories: true` an 8-K that carries a press release joins that
+release's story, so read filings uncollapsed.
+
+### Insider feed as CSV
+
+`news.insiderCsv()` returns the insider feed as one file with the same filters,
+walked on the server up to your plan's row cap (Free 500, Basic 2,000, Pro
+10,000) inside its archive window. The whole file counts as one request.
+
+```ts
+import { writeFile } from "node:fs/promises";
+
+const filters = { symbol: "NVDA", is10b5_1: false };
+const csv = await client.news.insiderCsv(filters);
+console.log(csv.rows, "rows of", csv.row_cap, "->", csv.filename);
+await writeFile(csv.filename ?? "insider.csv", csv.text);
+
+if (csv.truncated === "row_cap" && csv.next_cursor) {
+  // more rows exist: continue from the cursor with the same filters
+  const more = await client.news.insiderCsv({ ...filters, cursor: csv.next_cursor });
+}
+```
+
+`truncated` is `"row_cap"`, `"archive_horizon"` (the walk reached your plan's
+archive depth) or `null` when the file holds everything the filters select. The
+`next_cursor` also works for `news.insider()` with the same `sort`. A bad filter
+is the same `BadRequestError` as on the JSON feed, raised before any row.
+
+### Coverage passport
+
+What each data source holds, from when, and with which caveats. Read it before a
+backtest: `first_row_at` is the earliest row we hold, not the start of dense
+coverage, and `history_note` says which months are thin.
+
+```ts
+const cov = await client.coverage();
+console.log(cov.as_of); // computed once a day
+for (const source of cov.sources) {
+  console.log(source.source, source.first_row_at, source.rows_total, source.stale);
+}
+const eightK = cov.sources.find((s) => s.source === "sec_form8k");
+console.log(eightK?.history_note, eightK?.limits, eightK?.archive_days);
 ```
 
 > **Type-name note:** the symbol model is exported as `Symbol`, which shadows the
@@ -321,8 +390,19 @@ body — so both the app-layer (`{ message, extra }`) and host-gate
 
 Idempotent GETs are retried automatically on **429**, **5xx**, and network errors —
 `maxRetries` times (default **2**) with exponential backoff and full jitter,
-honoring the `Retry-After` header on 429s. Each request has a timeout (default
-**30s**) enforced with `AbortController`.
+honoring a `Retry-After` header when the response has one (capped by
+`maxRetryAfter`, default 60s). Each request has a timeout (default **30s**)
+enforced with `AbortController`.
+
+Every wait before a retry is reported through `logger` (default `console`), so a
+client sleeping on a 429 never looks hung:
+
+```text
+alphai: HTTP 429 (rate limited) on GET /api/news/; waiting 12.0s before retry 1 of 2 (Retry-After: 12s; daily budget 87/100 left)
+```
+
+Pass any object with a `warn(message)` method to route it, or `logger: null` to
+silence it.
 
 ```ts
 const client = new AlphaAI({
@@ -351,6 +431,11 @@ console.log(client.lastRateLimit); // { limit: 10000, remaining: 9998, reset: 17
 Cache-served responses may omit the headers; in that case `lastRateLimit` keeps its
 previous value.
 
+The trio reports the **per-day** layer. The per-minute burst cap is not in any
+header: it shows up only as a 429 with a short `Retry-After`, which the client
+waits out (and logs). A 429 while the daily budget still has room is the
+per-minute cap; pace bursts yourself if you need to avoid it.
+
 ## Configuration
 
 ```ts
@@ -360,8 +445,10 @@ new AlphaAI({
   timeout: 30_000,                         // ms
   maxRetries: 2,
   backoffFactor: 0.5,                      // seconds
+  maxRetryAfter: 60,                       // cap on an honored Retry-After, seconds
   fetch: customFetch,                      // inject a fetch (tests, proxies, edge)
-  userAgent: "alphai-sdk-js/0.1.0",        // default
+  userAgent: "alphai-sdk-js/<version>",    // default
+  logger: console,                         // retry-wait lines; null silences them
 });
 ```
 

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-09
+
+### Added
+- `news.list` / `news.iterate` take `sourceType` (`gdelt`, `sec_form4`,
+  `sec_form8k`, `sec_form6k`) and `item` (an 8-K item code such as `"5.02"`,
+  implies 8-Ks), the feed filters `news.search` already had.
+- `RichNewsArticle.filing` (`EightKFiling`): the structured 8-K block on 8-K
+  rows, with every item code, the primary item, accession number, `filed_at`,
+  `event_date` and the press-release `exhibit_url`.
+- `news.insiderCsv()`: the insider feed as one CSV file (`format=csv`) with the
+  feed's filters, resolved as `InsiderCsvExport` with `rows`, `row_cap`,
+  `truncated` and `next_cursor` from the response headers.
+- `client.coverage()`: the coverage passport, typed as `Coverage` /
+  `CoverageSource` / `CoverageChannel` / `CoverageArchiveDays`.
+- `news.insider` / `news.iterateInsider` take `is10b5_1` (`false` keeps
+  discretionary trades only).
+- `logger` option: receives one line before every retry wait. Defaults to
+  `console`; `null` silences it.
+- Typed fields the API already sent: `RichNewsArticle.earnings` (the earnings
+  read on `news.get`, `null` on most articles), `InsiderEvent.filed_at` /
+  `.late_filing`, `OriginalArticle.ownership_form` and `NewsPage.symbol_note`.
+  `InsiderEvent` and `NewsSourceType` are now exported.
+
+### Changed
+- Every wait before a retry (429, 5xx, network error) is logged with the
+  seconds to wait, `Retry-After` and, on a 429, the daily budget left, so a
+  client waiting out a rate limit no longer looks hung.
+- `Retry-After` is honored on a retryable 5xx too (a cold coverage cache
+  answers 503 with one), not only on a 429; still capped by `maxRetryAfter`.
+
+### Documentation
+- README: filings, the CSV export, the coverage passport, a `null` guard on
+  `article.earnings`, and a note that the per-minute limit is not in any
+  response header.
+
 ## [0.7.1] - 2026-10-01
 
 ### Added
