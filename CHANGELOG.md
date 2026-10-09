@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-09
+
+### Added
+- `client.stories`: `top()` (the last 48 hours ranked, up to 50), `list()` /
+  `iter()` (every story newest-first, cursor-paginated, `pageSize` 1-50),
+  `get(storyId)` (a `StoryLookup`: `found` with the `Story`, `merged` with
+  `redirect_to`, `not_a_story` with the `article`), `getStory()` (follows
+  merges, `null` for a single-publisher id), `materials()` / `iterMaterials()`
+  (the articles behind a story, oldest first). Types: `TopStories`,
+  `StoriesPage`, `StoryCard`, `Story`, `StoryKeyFact`, `StoryTickerTake`,
+  `StoryLookup`, `StoryArticleRef`, `StoryMaterial`, `StoryMaterialsPage`.
+
+### Changed
+- `RichNewsArticle.story_id` is now filled on every row of the feed, search,
+  trending and `news.get` (API 1.49.0), not only with `collapseStories`, and it
+  no longer changes when the story's root moves or two stories merge.
+  `sources_count` / `sources` stay collapse-only.
+
 ## [0.7.2] - 2026-10-09
 
 ### Added

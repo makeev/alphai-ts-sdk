@@ -202,6 +202,50 @@ archive depth) or `null` when the file holds everything the filters select. The
 `next_cursor` also works for `news.insider()` with the same `sort`. A bad filter
 is the same `BadRequestError` as on the JSON feed, raised before any row.
 
+### Stories
+
+A story is an event that two or more publishers reported, summarised by AlphAI
+from the articles themselves: what happened, the figures with the publisher each
+came from, why it matters, a read per ticker and the questions the sources leave
+open. Every article row carries a permanent `story_id` (the uid of the story's
+first root article, unchanged when a stronger copy takes the root over or two
+stories merge); a lone article names itself.
+
+```ts
+const top = await client.stories.top(); // last 48h, ranked by importance, coverage and freshness
+for (const card of top.results.slice(0, 5)) {
+  console.log(card.importance, card.publishers, card.title);
+}
+
+for await (const card of client.stories.iter({ maxItems: 50 })) {
+  console.log(card.last_material_at, card.story_id, card.summary_state); // newest first
+}
+
+// A story_id taken from any article row: most resolve to not_a_story (one
+// publisher carried the event), a few to a summarised story.
+const lookup = await client.stories.get(top.results[0].story_id);
+if (lookup.status === "found" && lookup.story) {
+  console.log(lookup.story.summary, lookup.story.why_it_matters);
+  for (const fact of lookup.story.key_facts) console.log("-", fact.text, `(${fact.publisher})`);
+  for (const take of lookup.story.ticker_takes) console.log(take.ticker, take.impact, take.note);
+} else if (lookup.status === "merged" && lookup.redirect_to) {
+  await client.stories.get(lookup.redirect_to); // or client.stories.getStory(id), which follows merges
+} else if (lookup.status === "not_a_story") {
+  console.log("single-publisher article:", lookup.article?.uid);
+}
+
+for await (const m of client.stories.iterMaterials(top.results[0].story_id)) {
+  console.log(m.time_published, m.publisher, m.url); // oldest first
+}
+```
+
+`summary_state` is `published`, `stale` (articles joined after the summary; a
+rewrite is queued) or `preparing` (no summary yet; `title` and `summary` are the
+lead article's). A cursor or a story past your plan's archive horizon throws
+`PermissionDeniedError` with `extra.reason === "archive_horizon"`. Summaries are
+AI-generated financial information for research, not investment advice; article
+bodies are never returned.
+
 ### Coverage passport
 
 What each data source holds, from when, and with which caveats. Read it before a

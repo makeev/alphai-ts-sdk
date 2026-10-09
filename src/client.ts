@@ -3,6 +3,7 @@ import { HttpClient } from "./http";
 import type { Coverage, RateLimit, RequestOptions } from "./models/types";
 import { NewsResource } from "./resources/news";
 import { RadarResource } from "./resources/radar";
+import { StoriesResource } from "./resources/stories";
 import { SymbolsResource } from "./resources/symbols";
 
 /**
@@ -22,6 +23,8 @@ export class AlphaAI {
   readonly radar: RadarResource;
   /** Symbols endpoints. */
   readonly symbols: SymbolsResource;
+  /** Stories: events covered by two or more publishers, summarised from their sources. */
+  readonly stories: StoriesResource;
 
   private readonly http: HttpClient;
 
@@ -30,6 +33,7 @@ export class AlphaAI {
     this.radar = new RadarResource(this.http);
     this.news = new NewsResource(this.http);
     this.symbols = new SymbolsResource(this.http);
+    this.stories = new StoriesResource(this.http);
   }
 
   /**

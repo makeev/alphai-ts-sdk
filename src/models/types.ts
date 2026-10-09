@@ -200,7 +200,12 @@ export interface RichNewsArticle {
    * filing text. `null` on every other article: check before use.
    */
   earnings?: EarningsReport | null;
-  /** Present only when `collapseStories` (collapse=story) is set. */
+  /**
+   * The story this article belongs to: a permanent key (the uid of the story's
+   * first root article), filled on every row since API 1.49.0; a lone article
+   * names itself. Resolve it with `stories.get(story_id)`. `null` only on
+   * `news.related`.
+   */
   story_id?: string | null;
   /** Present only when `collapseStories` is set. */
   sources_count?: number | null;

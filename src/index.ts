@@ -122,3 +122,22 @@ export type {
 export type { NewsBriefOptions } from "./models/brief";
 export type { RadarSnapshotOptions, RadarIterateOptions } from "./models/radar";
 export { RadarResource } from "./resources/radar";
+export type {
+  GetStoryOptions,
+  StoriesIterOptions,
+  StoriesPage,
+  StoriesPageOptions,
+  Story,
+  StoryArticleRef,
+  StoryCard,
+  StoryKeyFact,
+  StoryLookup,
+  StoryLookupStatus,
+  StoryMaterial,
+  StoryMaterialsPage,
+  StorySummaryState,
+  StoryTickerImpact,
+  StoryTickerTake,
+  TopStories,
+} from "./models/stories";
+export { StoriesResource } from "./resources/stories";
