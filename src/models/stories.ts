@@ -72,7 +72,6 @@ export interface Story extends StoryCard {
   /** Articles that joined after the summary was written (`stale` only). */
   new_materials: number;
   revision_generated_at: string | null;
-  model: string;
   /** Whether alphai.io lets search engines index the story's page. Informational. */
   indexable: boolean;
 }
