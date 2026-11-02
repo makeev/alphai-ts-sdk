@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-02
+
+### Added
+- `client.news.insiderClusters()` / `iterateInsiderClusters()`: insider cluster
+  buys — episodes in which several different insiders of one issuer bought on
+  the open market together (`GET /api/news/insider/clusters/`, API 1.38.0).
+  Options `days` (1–90, measured on `known_at`), `minBuyers`, `minUsd`,
+  `pattern` (`open_market` by default; `plan_or_offering`, `holders_only`,
+  `all`), `symbol`, `sort` (`recent`, `buyers`, `value`), `cursor`, `pageSize`;
+  ranges are checked locally. Types `InsiderClustersPage`, `InsiderCluster`,
+  `ClusterBuyer` (with `role` and `reason`), `ClusterFiling`,
+  `InsiderClustersMeta`; money as decimal strings.
+
 ## [0.9.0] - 2026-10-25
 
 ### Removed

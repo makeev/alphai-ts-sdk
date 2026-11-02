@@ -141,3 +141,17 @@ export type {
   TopStories,
 } from "./models/stories";
 export { StoriesResource } from "./resources/stories";
+export type {
+  ClusterBuyer,
+  ClusterBuyerReason,
+  ClusterBuyerRole,
+  ClusterFiling,
+  ClusterPattern,
+  ClusterPatternFilter,
+  ClusterSort,
+  InsiderCluster,
+  InsiderClustersIterateOptions,
+  InsiderClustersMeta,
+  InsiderClustersOptions,
+  InsiderClustersPage,
+} from "./models/clusters";

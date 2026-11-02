@@ -1,6 +1,12 @@
 import { AlphaAIError } from "../errors";
 import type { HttpClient, QueryParams } from "../http";
 import type { NewsBrief, NewsBriefOptions } from "../models/brief";
+import type {
+  InsiderCluster,
+  InsiderClustersIterateOptions,
+  InsiderClustersOptions,
+  InsiderClustersPage,
+} from "../models/clusters";
 import type { NewsSearchOptions, NewsSearchPage } from "../models/search";
 import type {
   CategoryFilter,
@@ -249,6 +255,62 @@ export class NewsResource {
       maxItems,
       maxPages,
       stopOnEmptyPage: rest.sort === "ingested",
+    });
+  }
+
+  /**
+   * `GET /api/news/insider/clusters/` — insider cluster buys: episodes in which
+   * several different insiders of one issuer bought on the open market
+   * together. An issuer's Form 4 purchase dates are chained into one episode
+   * while consecutive purchases are at most 10 days apart (cut at 30 days), and
+   * every purchase inside it is examined before a buyer counts: IPO or PIPE
+   * allocations, ESPP / DRIP / director-plan lots, unpriced units and the same
+   * trade reported through two owners are labeled per buyer (`role`) rather
+   * than counted. The episode's `pattern` is `open_market` when at least two
+   * independent buyers remain and one is an officer or director; the default
+   * lists only those — ask `pattern: "plan_or_offering"`, `"holders_only"` or
+   * `"all"` for the rest.
+   *
+   * `days` (1–90, default 30) is measured on `known_at`, when the episode's
+   * latest filing reached EDGAR, so "what became known this month" is one
+   * call; deeper than the key's archive horizon (Free 30, Basic 90) throws
+   * `PermissionDeniedError` (`archive_horizon`). Cursors are sort-specific.
+   * A descriptive screen, not point-in-time and with no returns attached
+   * (`meta.research_only`); coverage starts at `meta.coverage_since`. Ranges
+   * are checked locally (`RangeError`) before any request.
+   */
+  insiderClusters(options: InsiderClustersOptions = {}): Promise<InsiderClustersPage> {
+    integerRange("days", options.days, 1, 90);
+    integerRange("minBuyers", options.minBuyers, 2, 10);
+    integerRange("minUsd", options.minUsd, 0);
+    integerRange("pageSize", options.pageSize, 1, 50);
+    return this.http.request<InsiderClustersPage>("/api/news/insider/clusters/", {
+      query: {
+        days: options.days,
+        min_buyers: options.minBuyers,
+        min_usd: options.minUsd,
+        pattern: options.pattern,
+        symbol: options.symbol,
+        sort: options.sort,
+        cursor: options.cursor,
+        page_size: options.pageSize,
+      },
+      signal: options.signal,
+    });
+  }
+
+  /**
+   * Iterate {@link NewsResource.insiderClusters} across pages, following
+   * `next_cursor` with the same filters and `sort` on every page.
+   */
+  iterateInsiderClusters(
+    options: InsiderClustersIterateOptions = {},
+  ): AsyncGenerator<InsiderCluster> {
+    const { maxItems, maxPages, cursor, ...rest } = options;
+    return paginate<InsiderCluster>((next) => this.insiderClusters({ ...rest, cursor: next }), {
+      initialCursor: cursor,
+      maxItems,
+      maxPages,
     });
   }
 

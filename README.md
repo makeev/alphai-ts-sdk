@@ -202,6 +202,43 @@ archive depth) or `null` when the file holds everything the filters select. The
 `next_cursor` also works for `news.insider()` with the same `sort`. A bad filter
 is the same `BadRequestError` as on the JSON feed, raised before any row.
 
+### Insider cluster buys
+
+`news.insiderClusters()` lists episodes in which several different insiders of
+one issuer bought on the open market together: an issuer's Form 4 purchase dates
+are chained while at most 10 days apart (an episode is cut at 30 days), and every
+purchase is examined before a buyer counts. IPO and PIPE allocations, ESPP / DRIP
+/ director-plan lots, unpriced units and the same trade reported through two
+owners are labeled per buyer (`role`) instead of counted, so a 30-name filing
+burst is not one cluster. The default lists only `open_market` episodes (two or
+more independent buyers, one of them an officer or director); ask for
+`pattern: "plan_or_offering"`, `"holders_only"` or `"all"` to see the rest.
+
+```ts
+const page = await client.news.insiderClusters({ days: 30, minUsd: 100_000, sort: "value" });
+for (const cl of page.results) {
+  console.log(cl.ticker, cl.buyers, "buyers", cl.total_usd, cl.window_start, cl.window_end);
+  for (const buyer of cl.buyers_detail) {
+    console.log("  ", buyer.role, buyer.name, buyer.title || "director", buyer.usd);
+  }
+  for (const filing of cl.filings_detail) console.log("  ", filing.accession_number, filing.sec_url);
+}
+
+for await (const cl of client.news.iterateInsiderClusters({ symbol: "RAPP", pattern: "all", days: 90 })) {
+  console.log(cl.known_at, cl.pattern, cl.pattern_reasons);
+}
+```
+
+`days` (1–90, default 30) is measured on `known_at`, when the episode's latest
+filing reached EDGAR, so "what became known this month" is one call; deeper than
+your plan's archive horizon throws `PermissionDeniedError` (`archive_horizon`).
+`buyers` counts independent buyers, `buyers_total` everyone who bought; money
+fields are decimal strings, `total_usd` is `null` when no tranche carries a price
+and `value_partial` says it understates. Each buyer's `news_uids` open the event
+with `news.get(uid)`. The list is a descriptive screen (`meta.research_only`),
+not point-in-time; coverage starts at `meta.coverage_since`. Ranges are checked
+locally (`RangeError`) before any request.
+
 ### Stories
 
 A story is an event that two or more publishers reported, summarised by AlphAI
