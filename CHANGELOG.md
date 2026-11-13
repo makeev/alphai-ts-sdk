@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-13
+
+### Added
+- `RichNewsArticle.event` (`CorporateEvent`): the typed corporate event an SEC
+  8-K, a 6-K earnings release or a PR Newswire release reports, on rows of
+  `news.list`, `news.search` and `news.get` (OpenAPI 1.61.0). It carries `type`
+  (one of the 17 `CorporateEventType` values), `role`, `stage`, `counterparty`,
+  `facts`, `also` (`CorporateSecondaryEvent`: other events announced in the same
+  document) and `verified`. `null` on press and Form 4 rows and until the
+  document has been read.
+- `CorporateEventFact`: `name`, the quoted `value`, and the parsed `number`,
+  `number_high`, `unit` and `scale`. `number` and `number_high` are JSON numbers,
+  as the API sends them; the exact figure is the quote in `value`.
+- `news.list` / `news.iterate` take `eventType`: one type, an array or a CSV
+  string, OR-matched and serialized like `category` (sends `event_type`). It
+  also matches the events in `event.also`. The API answers `400` for an unknown
+  type and for `eventType` next to `sort: "ingested"`; both raise
+  `BadRequestError`.
+- `CORPORATE_EVENT_TYPES`: the runtime list of the 17 event types.
+
+### Changed
+- `BadRequestError.fields`: a validation entry that names no parameter (a rule
+  about a combination, such as `eventType` next to `sort: "ingested"`) is now
+  filed under the key `_`. It used to land under an empty-string key.
+
+### Documentation
+- README: corporate events (`eventType`, the `event` block, the two 400s) and a
+  note on parsed numbers next to quoted figures.
+
 ## [0.10.0] - 2026-11-02
 
 ### Added

@@ -2,4 +2,4 @@
  * The current SDK version. Kept in sync with `package.json`.
  * Used to build the default `User-Agent` header.
  */
-export const VERSION = "0.10.0";
+export const VERSION = "0.11.0";

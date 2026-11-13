@@ -24,9 +24,11 @@ export {
 } from "./errors";
 
 export {
+  CORPORATE_EVENT_TYPES,
   NEWS_CATEGORIES,
   type Actionability,
   type Confidence,
+  type CorporateEventType,
   type NewsCategory,
   type Sentiment,
 } from "./models/enums";
@@ -35,6 +37,9 @@ export type {
   AITradingInsights,
   AlternativePerspectives,
   CategoryFilter,
+  CorporateEvent,
+  CorporateEventFact,
+  CorporateSecondaryEvent,
   Coverage,
   CoverageArchiveDays,
   CoverageChannel,

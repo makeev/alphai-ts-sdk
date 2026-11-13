@@ -62,6 +62,7 @@ function newsQuery(options: NewsListOptions): QueryParams {
     to_date: dateParam(options.toDate),
     source_type: normalizeCategories(options.sourceType),
     item: options.item,
+    event_type: normalizeCategories(options.eventType),
   };
 }
 
@@ -177,6 +178,12 @@ export class NewsResource {
    * `sourceType` selects press (`gdelt`) or SEC filings (`sec_form4`,
    * `sec_form8k`, `sec_form6k`); `item` (e.g. `"5.02"`) keeps 8-Ks carrying
    * that item and implies `sec_form8k`. 8-K rows carry the `filing` block.
+   *
+   * `eventType` (e.g. `"buyback"`, `["dividend", "buyback"]`) keeps rows whose
+   * `event` block is of that corporate event type, as the main event or inside
+   * `event.also`. It works in the default order only: next to
+   * `sort: "ingested"`, or with an unknown type, the API answers 400
+   * (`BadRequestError`).
    */
   list(options: NewsListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/", {

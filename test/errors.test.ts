@@ -88,6 +88,33 @@ describe("error mapping", () => {
     expect(err.allowedParams).toEqual(["cursor", "page_size", "symbol"]);
   });
 
+  it("files an entry with an empty loc under `_`, next to the named ones", async () => {
+    // A rule about a combination of parameters names no single one.
+    const client = makeClient(
+      mockFetch(() =>
+        jsonResponse(
+          {
+            message: "Validation error",
+            extra: {
+              fields: [
+                { type: "value_error", loc: [], msg: "a cannot be combined with b" },
+                { type: "value_error", loc: [], msg: "c cannot be combined with d" },
+                { type: "int_parsing", loc: ["page_size"], msg: "Input should be an integer" },
+              ],
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const err = (await captureError(client.news.list())) as BadRequestError;
+
+    expect(err.fields).toEqual({
+      _: ["a cannot be combined with b", "c cannot be combined with d"],
+      page_size: ["Input should be an integer"],
+    });
+  });
+
   it("leaves allowedParams undefined when the API did not send it", async () => {
     const client = makeClient(
       mockFetch(() =>

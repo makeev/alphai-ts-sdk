@@ -1,4 +1,10 @@
-import type { Actionability, Confidence, NewsCategory, Sentiment } from "./enums";
+import type {
+  Actionability,
+  Confidence,
+  CorporateEventType,
+  NewsCategory,
+  Sentiment,
+} from "./enums";
 
 /**
  * AlphAI response and request model types.
@@ -179,6 +185,126 @@ export interface EightKFiling {
   exhibit_url?: string | null;
 }
 
+/**
+ * One fact of a corporate event. `value` is the document's own wording; the
+ * numeric fields are parsed from it by AlphAI, so a number is never further
+ * from the document than the quote beside it.
+ */
+export interface CorporateEventFact {
+  /**
+   * What the fact is. The names depend on the event type: `deal_value`,
+   * `premium_pct` and `expected_close` on `m_and_a`; `amount_per_share`,
+   * `record_date` and `payable_date` on `dividend`; `authorization_amount` on
+   * `buyback`; `person_name`, `title` and `action` on `exec_change`; and so
+   * on. A fact appears only when the document states it; percentages are
+   * never computed.
+   */
+  name: string;
+  /**
+   * The fact as the document words it (`"$25 billion"`, `"Dec. 21, 2026"`):
+   * a quote, not a paraphrase. For the enumerated facts it is the normalized
+   * value instead (`action` `"appointed"` / `"resigned"` …, `consideration`
+   * `"cash"` / `"stock"` / `"mixed"`, `is_increase` `"true"` / `"false"`).
+   */
+  value: string;
+  /**
+   * The numeric value parsed from `value`, in the stated `scale`
+   * (`"$340 million"` → `340` with scale `"millions"`; `"$0.21"` → `0.21`).
+   * The low end when `value` is a range. `null` for text, dates and
+   * enumerated facts, and when the figure cannot be read without a guess.
+   * A JSON number, as the API sends it; the exact figure is the quote in
+   * `value`.
+   */
+  number?: number | null;
+  /**
+   * The high end when `value` is a range (`"$6.50 to $6.90"` → `number` `6.5`,
+   * `number_high` `6.9`), in the same `scale` as `number`; `null` for a
+   * single value.
+   */
+  number_high?: number | null;
+  /**
+   * Unit of `number`: an ISO 4217 currency code (`"USD"`, `"EUR"`, `"GBP"`…),
+   * `"percent"` or `"bps"` (basis points); `null` when the value states none,
+   * as for a share count.
+   */
+  unit?: string | null;
+  /**
+   * Multiplier the document states next to the figure. `null` means `number`
+   * is the full figure.
+   */
+  scale?: "thousands" | "millions" | "billions" | "trillions" | (string & {}) | null;
+}
+
+/** Another event reported in the same document as the main one (`event.also`). */
+export interface CorporateSecondaryEvent {
+  type: CorporateEventType | (string & {});
+  /** The facts of this event, quoted from the document. */
+  facts: CorporateEventFact[];
+}
+
+/**
+ * The corporate event an SEC 8-K, a 6-K earnings release or a PR Newswire
+ * release reports (`event`): a type, the issuer's side of it, and facts quoted
+ * from the document. Every quoted value is searched for in the document's text
+ * before it is published; a value that is not found there is withheld, and
+ * `verified` says whether that happened. A type settled by the 8-K item alone
+ * (`shareholder_vote` for item 5.07, `bankruptcy` for 1.03, `restructuring`
+ * for 2.05, `listing_notice` for 3.01) has no facts. AI-generated from the
+ * document: check the filing before acting on a number.
+ */
+export interface CorporateEvent {
+  /** One type per row; other events the same document reports are in `also`. */
+  type: CorporateEventType | (string & {});
+  /**
+   * How far the event has gone, for `m_and_a` (`announced`, `definitive`,
+   * `completed`, `terminated`) and `offering` (`proposed`, `priced`, `closed`,
+   * `terminated`). A copy of the `stage` fact; `null` for the other types or
+   * when the document does not say.
+   */
+  stage?: string | null;
+  /**
+   * The reporting company's side of the event: `acquirer` or `target` in a
+   * deal, `customer` or `supplier` in a contract, `issuer` for its own
+   * securities and corporate actions. `null` when not established.
+   */
+  role?:
+    | "issuer"
+    | "acquirer"
+    | "target"
+    | "customer"
+    | "supplier"
+    | "other"
+    | (string & {})
+    | null;
+  /**
+   * The other party, as named in the document: the target when `role` is
+   * `acquirer`, the buyer when it is `target`, the customer or supplier of a
+   * contract. A copy of the `counterparty` fact; `null` when there is none or
+   * the name was not found in the text.
+   */
+  counterparty?: string | null;
+  /**
+   * The facts of the event, each quoted from the document. May be empty: the
+   * type is published even when no fact could be quoted.
+   */
+  facts: CorporateEventFact[];
+  /**
+   * `true` when nothing was withheld: every quoted fact was found in the
+   * document and every enumerated one is a known value. `false` when at least
+   * one fact was dropped by that check, or while the facts are still being
+   * read (the row then carries the type and an empty `facts`). The facts that
+   * are present have all passed the check either way.
+   */
+  verified: boolean;
+  /**
+   * Other events the same document reports, each with its own type and facts:
+   * typically a dividend, a buyback or a guidance change inside an earnings
+   * release. The `eventType` filter matches these too. Empty when the document
+   * reports one event.
+   */
+  also: CorporateSecondaryEvent[];
+}
+
 export interface RichNewsArticle {
   /** Search endpoint only. */
   search_match?: import("./search").SearchMatch | null;
@@ -194,6 +320,15 @@ export interface RichNewsArticle {
    * `null` on press, Form 4 and 6-K rows and on the other endpoints.
    */
   filing?: EightKFiling | null;
+  /**
+   * The typed corporate event the document reports, with facts quoted from its
+   * text — on SEC 8-K rows, 6-K earnings releases and PR Newswire releases of
+   * `news.list`, `news.search` and `news.get`, once the document has been read
+   * (usually within minutes of the row appearing). `null` until then, on press
+   * and Form 4 rows and on the other endpoints: check before use. Filter the
+   * feed with `eventType`.
+   */
+  event?: CorporateEvent | null;
   /**
    * AlphAI's structured earnings read — `news.get` only, and only on a major
    * ticker's earnings filing whose figures cleared the cross-check against the
@@ -600,6 +735,25 @@ export interface NewsListOptions extends RequestOptions {
    * source type the API answers 400.
    */
   item?: string;
+  /**
+   * Keep only rows whose `event` block is of this corporate event type, as the
+   * main event or as one of the events in `event.also`, so `"buyback"` also
+   * finds a buyback announced inside an earnings release. OR-matched; single
+   * value, array or CSV string, serialized like `category`. Sends
+   * `event_type`. Events are read from SEC 8-K filings, 6-K earnings releases
+   * and PR Newswire releases, so only those rows can match; press coverage of
+   * the same event carries no `event`.
+   *
+   * Works in the default `sort: "published"` order only. With
+   * `sort: "ingested"` the API answers `400`: a row gets its event after it
+   * enters the feed, so a delta cursor would already be past it. To follow new
+   * events, poll the default order with `fromDate` and de-duplicate by `uid`.
+   * An unknown type is a `400` that lists the allowed values, and so is
+   * `eventType` next to a `sourceType` that names only `sec_form4`. With
+   * `collapseStories` only the row that leads its story is matched, so omit it
+   * for the complete list.
+   */
+  eventType?: CorporateEventType | (string & {}) | Array<CorporateEventType | (string & {})>;
 }
 
 /** Options for {@link NewsResource.iterate}. */

@@ -99,6 +99,10 @@ export class BadRequestError extends AlphaAIAPIError {
    * `{field: messages}` for a field rejected inside a view (a malformed `cursor`).
    * Releases before 0.4.1 understood only the record, so the array shape left
    * `fields` undefined.
+   *
+   * A rule about a combination of parameters names no single one (its `loc` is
+   * empty, as for `eventType` next to `sort: "ingested"`); its message is filed
+   * under the key `_`. Releases before 0.11.0 filed it under an empty string.
    */
   readonly fields?: Record<string, string[]>;
 
@@ -120,7 +124,7 @@ export class BadRequestError extends AlphaAIAPIError {
         for (const entry of raw) {
           if (!isRecord(entry)) continue;
           const loc = entry.loc;
-          const key = Array.isArray(loc) ? loc.map(String).join(".") : "_";
+          const key = Array.isArray(loc) && loc.length > 0 ? loc.map(String).join(".") : "_";
           const messages = normalised[key] ?? [];
           messages.push(String(entry.msg ?? ""));
           normalised[key] = messages;

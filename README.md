@@ -177,6 +177,70 @@ served no document for; `primary_item` is the one that set the row's category.
 With `collapseStories: true` an 8-K that carries a press release joins that
 release's story, so read filings uncollapsed.
 
+### Corporate events: `eventType` and the `event` block
+
+Rows from SEC 8-K filings, 6-K earnings releases and PR Newswire releases carry a
+typed `event`: what the document reports, the company's side of it, and facts
+quoted from its text. `eventType` filters the feed by it (single value, array or
+CSV string, OR-matched like `category`). It also matches the secondary events in
+`event.also`, so `"buyback"` finds a buyback announced inside an earnings release.
+
+```ts
+const page = await client.news.list({ eventType: ["dividend", "buyback"], minRelevance: 5 });
+for (const article of page.results) {
+  const event = article.event; // null on press and Form 4 rows, and until the document is read
+  if (!event) continue;
+  console.log(article.enrichment.tickers, event.type, event.role, event.stage, event.counterparty);
+  for (const fact of event.facts) {
+    // value is the document's own wording; number, unit and scale are parsed from it
+    console.log("  ", fact.name, fact.value, fact.number, fact.unit, fact.scale);
+  }
+  for (const other of event.also) console.log("  also:", other.type, other.facts.length, "facts");
+  if (!event.verified) console.log("  a fact was withheld, or the facts are still being read");
+}
+```
+
+The 17 types are exported as `CORPORATE_EVENT_TYPES`: `earnings`, `earnings_date`,
+`exec_change`, `m_and_a`, `offering`, `debt_financing`, `dividend`, `buyback`,
+`contract_award`, `guidance_update`, `stock_split`, `listing_notice`,
+`shareholder_vote`, `bankruptcy`, `restructuring`, `clinical_regulatory` and
+`other`. `news.search()` and `news.get()` return the same block; the filter exists
+on `news.list` and `news.iterate` only.
+
+A fact's `value` is a quote from the document (`"$340 million"`, `"Dec. 21, 2026"`),
+or the normalized value of an enumerated fact (`consideration` is `"cash"`,
+`"stock"` or `"mixed"`). `number` is that figure as a JSON number in the stated
+`scale` (`340` with `scale: "millions"`; a `null` scale means the full figure),
+`number_high` is the upper end when the document gives a range, and `unit` is an
+ISO currency code, `"percent"` or `"bps"`. All four are `null` for text and dates.
+Every quoted value is searched for in the document before it is published, and one
+that is not found is withheld: `verified: false` says that happened, or that the
+facts are still being read. The block is AI-generated from the document, so check
+the filing before acting on a number.
+
+`eventType` works in the default order only. With `sort: "ingested"` the API
+answers `400`, because a row gets its event after it enters the feed and a delta
+cursor would already be past it. To follow new events, poll with `fromDate` and
+de-duplicate by `uid`. An unknown type is a `400` as well, and its message lists
+the allowed values:
+
+```ts
+import { BadRequestError } from "alphai-sdk";
+
+try {
+  await client.news.list({ eventType: "buyback", sort: "ingested" });
+} catch (err) {
+  if (err instanceof BadRequestError) {
+    console.log(err.fields?._); // ["… event_type cannot be combined with sort=ingested …"]
+  }
+}
+```
+
+The unknown type is keyed by its parameter (`err.fields.event_type`). A rule about
+a combination of parameters names no single one, so its message is under
+`err.fields._`. With `collapseStories: true` only the row that leads its story is
+matched; omit it for the complete list.
+
 ### Insider feed as CSV
 
 `news.insiderCsv()` returns the insider feed as one file with the same filters,
@@ -309,6 +373,11 @@ Monetary fields (`buy_value_usd`, `sell_value_usd`, `net_value`) are **decimal
 strings** and are never coerced to `number` — JavaScript floats lose precision on
 large dollar amounts. If you need arithmetic, feed them to a big-decimal library.
 Timestamps are ISO 8601 **strings** (no automatic `Date` conversion).
+
+A figure parsed next to a quote is a JSON number, exactly as the API sends it:
+`numeric` on an earnings metric, `number` and `number_high` on a corporate event
+fact. It is expressed in the `scale` beside it, and the quote (`value`) remains the
+exact figure.
 
 ## Pagination
 
@@ -466,6 +535,10 @@ try {
 The error parser reads `message` first, then falls back to `detail`, then the raw
 body — so both the app-layer (`{ message, extra }`) and host-gate
 (`{ detail }`) envelopes are handled.
+
+`BadRequestError.fields` is keyed by parameter name. A rule about a combination of
+parameters (for example `eventType` next to `sort: "ingested"`) names no single
+one, and its message is filed under `_`.
 
 ## Retries
 
