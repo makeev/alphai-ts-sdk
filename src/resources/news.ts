@@ -72,6 +72,7 @@ function insiderQuery(options: InsiderListOptions): QueryParams {
     symbol: options.symbol,
     min_relevance: options.minRelevance,
     is_10b5_1: options.is10b5_1,
+    decision: options.decision,
     page_size: options.pageSize,
     sort: options.sort,
     from_date: dateParam(options.fromDate),
@@ -226,6 +227,14 @@ export class NewsResource {
    *
    * Supports `sort: "ingested"` under the same delta-polling contract as
    * {@link NewsResource.list}, with its own cursor family.
+   *
+   * Every sale's `insider` block carries the sale label (`decision`,
+   * `decision_reason`). `decision: "discretionary"` keeps the sales an insider
+   * chose to make, `"plan_like"` the ones that follow from a 10b5-1 plan or
+   * from paperwork, `"unknown"` the ones the filing does not say enough about.
+   * It combines with `is10b5_1`, `sort` and the other filters; any other value
+   * is a 400 (`BadRequestError`). `is10b5_1: false` alone still includes tax
+   * sales and exercise covers.
    */
   insider(options: InsiderListOptions = {}): Promise<NewsPage> {
     return this.http.request<NewsPage>("/api/news/insider/", {
@@ -244,6 +253,10 @@ export class NewsResource {
    * file holds everything) and continue a capped file with `next_cursor`,
    * which {@link NewsResource.insider} accepts too (same `sort`). Validation
    * errors are the JSON feed's 400s, raised before any row.
+   *
+   * The file's last two columns are `decision` and `decision_reason` (empty
+   * for an event without a sale). The file is returned as sent, so columns the
+   * API appends later arrive without an SDK update.
    */
   async insiderCsv(options: InsiderCsvOptions = {}): Promise<InsiderCsvExport> {
     const response = await this.http.send("/api/news/insider/", {

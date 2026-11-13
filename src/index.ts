@@ -25,10 +25,14 @@ export {
 
 export {
   CORPORATE_EVENT_TYPES,
+  INSIDER_DECISIONS,
+  INSIDER_DECISION_REASONS,
   NEWS_CATEGORIES,
   type Actionability,
   type Confidence,
   type CorporateEventType,
+  type InsiderDecision,
+  type InsiderDecisionReason,
   type NewsCategory,
   type Sentiment,
 } from "./models/enums";

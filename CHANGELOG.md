@@ -26,6 +26,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   type and for `eventType` next to `sort: "ingested"`; both raise
   `BadRequestError`.
 - `CORPORATE_EVENT_TYPES`: the runtime list of the 17 event types.
+- `InsiderEvent.decision` and `InsiderEvent.decision_reason`: the Form 4 sale
+  label on the `insider` block of a news row (OpenAPI 1.61.0). `decision` is
+  `discretionary` (the insider chose to sell), `plan_like` (the sale follows
+  from a 10b5-1 plan or from paperwork, such as a tax sale on vesting or an
+  option exercise cover) or `unknown`; `decision_reason` is one of 12 values
+  that name what decided it. Both are `null` when the event holds no sale: only
+  `transaction_code` `S` is labelled, so purchases, `D` and other codes carry
+  `null`. Types `InsiderDecision` and `InsiderDecisionReason`; on the response
+  both fields also accept a string the union does not list, since the API can
+  add reasons.
+- `news.insider` / `news.iterateInsider` / `news.insiderCsv` take `decision`
+  (`"discretionary"`, `"plan_like"` or `"unknown"`; sends `decision`). It
+  combines with `is10b5_1`, `sort: "ingested"`, the date window and the other
+  filters. The API answers `400` for any other value, raised as
+  `BadRequestError`. The filter exists on the insider feed only, not on
+  `news.list`.
+- `INSIDER_DECISIONS` and `INSIDER_DECISION_REASONS`: the runtime lists of the
+  three labels and the 12 reasons.
 
 ### Changed
 - `BadRequestError.fields`: a validation entry that names no parameter (a rule
@@ -35,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - README: corporate events (`eventType`, the `event` block, the two 400s) and a
   note on parsed numbers next to quoted figures.
+- README: insider sales by intent (`decision`, `decision_reason`, the table of
+  reasons, the 400) and the two columns the CSV export now ends with,
+  `decision` and `decision_reason`. `news.insiderCsv()` returns the file as
+  sent, so it needed no change.
+- `is10b5_1: false` is described as "not under a 10b5-1 plan", no longer as
+  "discretionary trades only": a sale outside a plan can still be a tax sale or
+  an exercise cover. For the sales an insider chose to make, use
+  `decision: "discretionary"`.
 
 ## [0.10.0] - 2026-11-02
 

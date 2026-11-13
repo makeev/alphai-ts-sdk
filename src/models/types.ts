@@ -2,6 +2,8 @@ import type {
   Actionability,
   Confidence,
   CorporateEventType,
+  InsiderDecision,
+  InsiderDecisionReason,
   NewsCategory,
   Sentiment,
 } from "./enums";
@@ -126,7 +128,8 @@ export interface EnrichedArticle {
  * `avg_price_usd` is value-weighted over priced tranches. `side` is the signal
  * label — `buy` (P) / `sell` (S) / `other` (incl. D, sale to issuer); the raw
  * `transaction_code` rides along. Money/share fields are decimal strings
- * ("25000", "187.32"); null when the filing prices no tranche.
+ * ("25000", "187.32"); null when the filing prices no tranche. Sales also
+ * carry the sale label, `decision` and `decision_reason`.
  */
 export interface InsiderEvent {
   side: "buy" | "sell" | "other";
@@ -134,6 +137,11 @@ export interface InsiderEvent {
   shares: string;
   avg_price_usd?: string | null;
   total_value_usd?: string | null;
+  /**
+   * True when any tranche executed under a pre-arranged 10b5-1 plan. `false`
+   * means "not under a plan", which is not the same as the insider's own
+   * decision: for that, read `decision`.
+   */
   is_10b5_1: boolean;
   insider_name: string;
   insider_title: string;
@@ -149,6 +157,33 @@ export interface InsiderEvent {
    * counted on Eastern dates with one weekday of slack.
    */
   late_filing?: boolean;
+  /**
+   * The sale label: was the sale the insider's own decision? See
+   * {@link InsiderDecision}. Read from the whole filing, in this order: the
+   * 10b5-1 checkbox; a footnote that names the mechanism (a plan, a tax sale
+   * on vesting, an exercise cover, a sale the insider did not control); then,
+   * for officers and for directors who are not 10% owners, the filing's own
+   * share arithmetic (what was sold against what vested or was exercised in
+   * the same filing). A sale none of these explains is `discretionary`. An
+   * event with several sales is `discretionary` if any of them is, else
+   * `unknown` if any of them is, else `plan_like`.
+   *
+   * `null` when the event holds no sale: only `transaction_code` `S` is
+   * labelled, so purchases, `D` (a sale to the issuer) and other codes carry
+   * `null`. A response cached before the label existed can lack the field.
+   *
+   * The label can be revised when the reading rules improve. The feed always
+   * carries the current one, `sort: "ingested"` does not send a revised event
+   * again, and `news.get` is cached for long, so it can show an older label.
+   */
+  decision?: InsiderDecision | (string & {}) | null;
+  /**
+   * Why the event got its `decision`, taken from the largest sale that set it;
+   * see {@link InsiderDecisionReason} for the twelve known values. `null` when
+   * `decision` is `null`, and for an `unknown` sale with no reason recorded.
+   * The API can add reasons, so handle a string that is not in the union.
+   */
+  decision_reason?: InsiderDecisionReason | (string & {}) | null;
 }
 
 /**
@@ -796,10 +831,30 @@ export interface InsiderListOptions extends RequestOptions {
   toDate?: DateBound;
   /**
    * Filter on the event's Rule 10b5-1 status, the field the `insider` block
-   * reports: `false` keeps discretionary trades only, `true` plan trades only;
+   * reports: `false` keeps events not under a plan, `true` plan events only;
    * omit for both. Sends `is_10b5_1`.
+   *
+   * "Not under a plan" is not the same as "the insider's own decision". A sale
+   * outside a plan can still be paperwork: shares sold to pay the tax on
+   * vesting, or a sale that only covers the cost of an option exercise. For
+   * sales the insider chose to make, use `decision: "discretionary"`.
    */
   is10b5_1?: boolean;
+  /**
+   * Filter on the sale label the `insider` block reports as `decision`; see
+   * {@link InsiderDecision}. `"discretionary"` keeps sales the insider chose
+   * to make, `"plan_like"` sales that follow from a 10b5-1 plan or from
+   * paperwork (a tax sale on vesting, a sale covering an option exercise),
+   * `"unknown"` sales the filing does not say enough about. Sends `decision`.
+   *
+   * Only sales are labelled. Purchases and other codes carry `decision: null`
+   * and match none of the values, so the three filtered feeds plus the events
+   * without a sale add up to the unfiltered one. Combines with `is10b5_1`,
+   * `sort: "ingested"`, the date window and every other filter. Any other
+   * value is a `400` (`BadRequestError`). The filter exists on the insider
+   * feed only: `news.list` does not take it.
+   */
+  decision?: InsiderDecision;
 }
 
 /** Options for {@link NewsResource.iterateInsider}. */
@@ -819,7 +874,12 @@ export type InsiderCsvOptions = Omit<InsiderListOptions, "pageSize">;
  * Built from the response's `X-Alphai-*` headers.
  */
 export interface InsiderCsvExport {
-  /** The whole file, header line first, columns in the order the API documents. */
+  /**
+   * The whole file, header line first, columns in the order the API documents.
+   * The last two columns are `decision` and `decision_reason`, empty for an
+   * event without a sale. New columns are only ever appended after the last
+   * one, so read cells by header name, not by position.
+   */
   text: string;
   /** Data rows in the file (`X-Alphai-Rows`); `null` if the header was missing. */
   rows: number | null;

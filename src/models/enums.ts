@@ -65,6 +65,68 @@ export type CorporateEventType =
   | "clinical_regulatory"
   | "other";
 
+/**
+ * The Form 4 sale label: was the sale the insider's own decision? Reported as
+ * `decision` in an article's `insider` block and taken by the `decision`
+ * filter of the insider feed.
+ *
+ * - `discretionary`: the insider chose to sell; nothing in the filing explains
+ *   the sale.
+ * - `plan_like`: the sale follows from a 10b5-1 plan or from paperwork (shares
+ *   sold to pay the tax on vesting, a sale that covers an option exercise).
+ * - `unknown`: the filing does not say enough to tell.
+ *
+ * Only sales (`transaction_code` `S`) are labelled. Purchases, `D` (a sale to
+ * the issuer) and other codes carry `null`.
+ */
+export type InsiderDecision = "discretionary" | "plan_like" | "unknown";
+
+/**
+ * Why an insider sale got its {@link InsiderDecision}, taken from the largest
+ * sale that set it.
+ *
+ * With `plan_like`:
+ * - `plan_10b5_1`: the 10b5-1 checkbox, or a footnote that places the sale
+ *   under a pre-arranged plan (so it can appear with `is_10b5_1: false`).
+ * - `tax_withholding`: shares sold to pay the tax on vesting.
+ * - `exercise_cover`: the sale covers the cost of an option exercise and its tax.
+ * - `stated_non_discretionary`: a footnote says the sale was automatic or
+ *   outside the insider's discretion.
+ *
+ * With `discretionary`:
+ * - `open_market`: no plan or paperwork explains the sale. Nothing in the
+ *   filing points to one, or the sale is far larger than what vested or was
+ *   exercised.
+ * - `exercise_and_sell`: options exercised and the exercised shares sold,
+ *   beyond what covering the exercise needs.
+ * - `sold_all_vested`: the shares sold plus those withheld for tax cover
+ *   everything that vested.
+ *
+ * With `unknown`:
+ * - `partial_vest_sale`: part of the newly vested shares sold, more than the
+ *   tax alone would need, or on top of tax already withheld.
+ * - `cover_ambiguous`: the sale could be an exercise cover at a high tax rate
+ *   or a choice.
+ * - `mixed_acquisitions`: the filing both vests shares and exercises options,
+ *   so the sale cannot be tied to either.
+ * - `price_disputed`: the filed price failed a price check, so the share
+ *   arithmetic is not trusted.
+ * - `no_lines`: the rest of the filing is not held.
+ */
+export type InsiderDecisionReason =
+  | "plan_10b5_1"
+  | "tax_withholding"
+  | "exercise_cover"
+  | "stated_non_discretionary"
+  | "open_market"
+  | "exercise_and_sell"
+  | "sold_all_vested"
+  | "partial_vest_sale"
+  | "cover_ambiguous"
+  | "mixed_acquisitions"
+  | "price_disputed"
+  | "no_lines";
+
 /** AI-assessed directional sentiment of a news item for a ticker. */
 export type Sentiment = "positive" | "neutral" | "negative";
 
@@ -120,3 +182,35 @@ export const CORPORATE_EVENT_TYPES = [
   "clinical_regulatory",
   "other",
 ] as const satisfies readonly CorporateEventType[];
+
+/**
+ * Runtime list of every {@link InsiderDecision}: the three values the
+ * `decision` filter of the insider feed takes. Any other value is answered
+ * with a `400`.
+ */
+export const INSIDER_DECISIONS = [
+  "discretionary",
+  "plan_like",
+  "unknown",
+] as const satisfies readonly InsiderDecision[];
+
+/**
+ * Runtime list of every known {@link InsiderDecisionReason}, in the order the
+ * API documents them: four for `plan_like`, three for `discretionary`, five for
+ * `unknown`. The API can add reasons, so a response may carry one that is not
+ * listed here.
+ */
+export const INSIDER_DECISION_REASONS = [
+  "plan_10b5_1",
+  "tax_withholding",
+  "exercise_cover",
+  "stated_non_discretionary",
+  "open_market",
+  "exercise_and_sell",
+  "sold_all_vested",
+  "partial_vest_sale",
+  "cover_ambiguous",
+  "mixed_acquisitions",
+  "price_disputed",
+  "no_lines",
+] as const satisfies readonly InsiderDecisionReason[];

@@ -95,8 +95,9 @@ const july = await client.news.list({
 // Trending: up to 10 ranked stories from the last 48h (not paginated).
 const trending = await client.news.trending();
 
-// Insider feed (SEC Form 4 filings). is10b5_1: false keeps discretionary trades only.
-const insider = await client.news.insider({ symbol: "NVDA", is10b5_1: false });
+// Insider feed (SEC Form 4 filings). decision: "discretionary" keeps the sales an
+// insider chose to make; is10b5_1: false keeps every event not under a 10b5-1 plan.
+const insider = await client.news.insider({ symbol: "NVDA", decision: "discretionary" });
 for await (const article of client.news.iterateInsider({ symbol: "NVDA" })) {
   // …
 }
@@ -241,6 +242,69 @@ a combination of parameters names no single one, so its message is under
 `err.fields._`. With `collapseStories: true` only the row that leads its story is
 matched; omit it for the complete list.
 
+### Insider sales by intent: `decision` and `decision_reason`
+
+Every Form 4 sale in an article's `insider` block carries `decision`. It is
+`discretionary` when nothing in the filing explains the sale, `plan_like` when the
+sale follows from a 10b5-1 plan or from paperwork (shares sold to pay the tax on
+vesting, a sale that covers an option exercise), and `unknown` when the filing
+does not say enough to tell. `decision_reason` names what decided it. The label is
+read from the whole filing, not only from the 10b5-1 checkbox, so
+`is10b5_1: false` still includes tax sales. To keep only the sales an insider
+chose to make, pass `decision: "discretionary"`:
+
+```ts
+const page = await client.news.insider({ symbol: "NVDA", decision: "discretionary" });
+for (const article of page.results) {
+  const trade = article.insider;
+  if (!trade) continue;
+  console.log(trade.insider_name, trade.total_value_usd, trade.decision, trade.decision_reason);
+}
+
+// New discretionary sales as filings arrive: the filter works in delta mode too.
+const fresh = await client.news.insider({ decision: "discretionary", sort: "ingested", cursor });
+```
+
+| `decision` | `decision_reason` | What the filing shows |
+| --- | --- | --- |
+| `plan_like` | `plan_10b5_1` | The 10b5-1 checkbox, or a footnote that places the sale under a pre-arranged plan (so it can appear with `is_10b5_1: false`) |
+| `plan_like` | `tax_withholding` | Shares sold to pay the tax on vesting |
+| `plan_like` | `exercise_cover` | The sale covers the cost of an option exercise and its tax |
+| `plan_like` | `stated_non_discretionary` | A footnote says the sale was automatic or outside the insider's discretion |
+| `discretionary` | `open_market` | No plan or paperwork explains the sale: nothing in the filing points to one, or the sale is far larger than what vested or was exercised |
+| `discretionary` | `exercise_and_sell` | Options exercised and the exercised shares sold, beyond what covering the exercise needs |
+| `discretionary` | `sold_all_vested` | The shares sold plus those withheld for tax cover everything that vested |
+| `unknown` | `partial_vest_sale` | Part of the newly vested shares sold, more than the tax alone would need, or on top of tax already withheld |
+| `unknown` | `cover_ambiguous` | The sale could be an exercise cover at a high tax rate or a choice |
+| `unknown` | `mixed_acquisitions` | The filing both vests shares and exercises options, so the sale cannot be tied to either |
+| `unknown` | `price_disputed` | The filed price failed a price check, so the share arithmetic is not trusted |
+| `unknown` | `no_lines` | The rest of the filing is not held |
+
+Only sales (`transaction_code` `S`) are labelled. Purchases, `D` (a sale to the
+issuer) and other codes carry `decision: null` and `decision_reason: null`, and
+they match none of the three filter values: the three filtered feeds plus the
+events without a sale add up to the unfiltered feed. An event with several sales
+is `discretionary` if any of them is, else `unknown` if any of them is, else
+`plan_like`. An `unknown` sale can come with a `null` reason.
+
+The filter is an option of `news.insider`, `news.iterateInsider` and
+`news.insiderCsv`, and it combines with `symbol`, `is10b5_1`, `sort: "ingested"`
+and the date window. `news.list` does not take it. A value outside the three is a
+`400`, raised as `BadRequestError` with the message under `err.fields.decision`.
+
+The values are exported as `INSIDER_DECISIONS` and `INSIDER_DECISION_REASONS`,
+with the `InsiderDecision` and `InsiderDecisionReason` unions. Both fields are
+typed as nullable and open: check for `null` before you branch on a label, and
+keep a default branch when you switch over `decision_reason`, since the API can
+add a reason. The label can also be revised when the reading rules improve. The
+feed always carries the current one, `sort: "ingested"` does not send a revised
+event again, and `news.get()` is cached for long, so it can show an older label.
+
+The per-ticker endpoint `GET /api/symbols/{ticker}/insider-trades/` is not
+wrapped by this SDK. Its events carry the same two fields with the same values,
+so the two unions type them when you fetch it yourself. There a sale to the
+issuer (`D`) is listed with `side: "sell"` and still has `decision: null`.
+
 ### Insider feed as CSV
 
 `news.insiderCsv()` returns the insider feed as one file with the same filters,
@@ -265,6 +329,10 @@ if (csv.truncated === "row_cap" && csv.next_cursor) {
 archive depth) or `null` when the file holds everything the filters select. The
 `next_cursor` also works for `news.insider()` with the same `sort`. A bad filter
 is the same `BadRequestError` as on the JSON feed, raised before any row.
+
+The file's last two columns are `decision` and `decision_reason`, empty for an
+event without a sale. New columns are only ever appended after the last one, so
+read cells by header name, not by position. `csv.text` is the file as sent.
 
 ### Insider cluster buys
 
